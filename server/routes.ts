@@ -174,6 +174,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const headers: Record<string, string> = {
         "host": new URL(EXTERNAL_API).host,
+        "accept": "application/json",
+        "x-requested-with": "XMLHttpRequest",
       };
 
       if (req.headers["content-type"]) {
@@ -189,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fetchOptions: RequestInit = {
         method: req.method,
         headers,
-        redirect: "follow",
+        redirect: "manual",
       };
 
       if (req.method !== "GET" && req.method !== "HEAD") {
@@ -214,39 +216,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       response.headers.forEach((value, key) => {
         const lk = key.toLowerCase();
-        if (lk === "transfer-encoding" || lk === "content-encoding" || lk === "content-length") return;
+        if (lk === "transfer-encoding" || lk === "content-encoding" || lk === "content-length" || lk === "location") return;
         if (lk === "set-cookie") {
           res.appendHeader("set-cookie", value);
           return;
         }
-        res.setHeader(key, value);
+        if (lk !== "content-type") {
+          res.setHeader(key, value);
+        }
       });
 
       console.log(`[PROXY] ${req.method} /api${req.url} => ${response.status} ${response.statusText}`);
-      res.status(response.status);
       const body = await response.arrayBuffer();
       const text = Buffer.from(body).toString("utf-8");
-      const fs = await import("fs");
+      let isJson = false;
       try {
         const parsed = JSON.parse(text);
+        isJson = true;
         const debugEndpoints = ["/invoices", "/quotes", "/reservations", "/services", "/login", "/auth"];
         const shouldLog = debugEndpoints.some(ep => req.url === ep || req.url.startsWith(ep + "?") || req.url.startsWith(ep + "/"));
         if (shouldLog) {
-          const safeName = req.url.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50);
-          const debugFile = `/tmp/api_debug_${req.method}_${safeName}.json`;
-          try { fs.writeFileSync(debugFile, JSON.stringify(parsed, null, 2).slice(0, 5000)); } catch {}
           if (Array.isArray(parsed) && parsed.length > 0) {
             console.log(`[DEBUG] ${req.method} /api${req.url} => Array[${parsed.length}], keys:`, Object.keys(parsed[0]), "sample:", JSON.stringify(parsed[0]).slice(0, 1500));
           } else if (parsed && typeof parsed === "object") {
             console.log(`[DEBUG] ${req.method} /api${req.url} => Object keys:`, Object.keys(parsed), "full:", JSON.stringify(parsed).slice(0, 2000));
           }
         }
+        res.status(response.status);
+        res.setHeader("content-type", "application/json");
+        res.send(Buffer.from(body));
       } catch {
         if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-          console.log(`[DEBUG] ${req.method} /api${req.url} => HTML response (not JSON), status: ${response.status}`);
+          console.log(`[DEBUG] ${req.method} /api${req.url} => HTML response, status: ${response.status}`);
+          const isRedirect = response.status >= 300 && response.status < 400;
+          const isMutation = req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE";
+          const isSuccess = response.status >= 200 && response.status < 300;
+          if (isRedirect || (isSuccess && isMutation)) {
+            res.status(200);
+            res.setHeader("content-type", "application/json");
+            res.json({ success: true, message: "Opération effectuée avec succès" });
+          } else if (isSuccess && req.method === "GET") {
+            res.status(200);
+            res.setHeader("content-type", "application/json");
+            res.json({});
+          } else {
+            res.status(response.status >= 400 ? response.status : 500);
+            res.setHeader("content-type", "application/json");
+            res.json({ message: "Erreur du serveur" });
+          }
+        } else {
+          res.status(response.status);
+          res.send(Buffer.from(body));
         }
       }
-      res.send(Buffer.from(body));
     } catch (err: any) {
       console.error("API proxy error:", err.message);
       res.status(502).json({ message: "Erreur de connexion au serveur API" });

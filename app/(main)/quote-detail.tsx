@@ -228,22 +228,12 @@ export default function QuoteDetailScreen() {
           onPress: async () => {
             setAccepting(true);
             try {
-              console.log("[QUOTE DEBUG] accepting quote", id, "viewToken:", viewToken);
-              try {
-                await quotesApi.accept(id!, viewToken);
-              } catch (firstErr: any) {
-                console.log("[QUOTE DEBUG] first accept attempt failed:", firstErr?.message, "- trying without viewToken");
-                if (viewToken) {
-                  await quotesApi.accept(id!);
-                } else {
-                  throw firstErr;
-                }
-              }
+              await quotesApi.accept(id!);
               queryClient.invalidateQueries({ queryKey: ["quotes"] });
               queryClient.invalidateQueries({ queryKey: ["quote", id] });
               showAlert({ type: "success", title: "Devis accepté", message: "Le devis a bien été accepté.", buttons: [{ text: "OK", style: "primary" }] });
             } catch (err: any) {
-              console.error("[QUOTE DEBUG] accept error:", err?.message);
+              console.error("[QUOTE] accept error:", err?.message);
               showAlert({ type: "error", title: "Erreur", message: err?.message || "Impossible d'accepter le devis.", buttons: [{ text: "OK", style: "primary" }] });
             } finally {
               setAccepting(false);
@@ -267,22 +257,12 @@ export default function QuoteDetailScreen() {
           onPress: async () => {
             setRejecting(true);
             try {
-              console.log("[QUOTE DEBUG] rejecting quote", id, "viewToken:", viewToken);
-              try {
-                await quotesApi.reject(id!, viewToken);
-              } catch (firstErr: any) {
-                console.log("[QUOTE DEBUG] first reject attempt failed:", firstErr?.message, "- trying without viewToken");
-                if (viewToken) {
-                  await quotesApi.reject(id!);
-                } else {
-                  throw firstErr;
-                }
-              }
+              await quotesApi.reject(id!);
               queryClient.invalidateQueries({ queryKey: ["quotes"] });
               queryClient.invalidateQueries({ queryKey: ["quote", id] });
               showAlert({ type: "success", title: "Devis refusé", message: "Le devis a bien été refusé.", buttons: [{ text: "OK", style: "primary" }] });
             } catch (err: any) {
-              console.error("[QUOTE DEBUG] reject error:", err?.message);
+              console.error("[QUOTE] reject error:", err?.message);
               showAlert({ type: "error", title: "Erreur", message: err?.message || "Impossible de refuser le devis.", buttons: [{ text: "OK", style: "primary" }] });
             } finally {
               setRejecting(false);

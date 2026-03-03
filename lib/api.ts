@@ -52,6 +52,8 @@ export async function apiCall<T = any>(
   const { method = "GET", body, headers = {}, isFormData = false } = options;
 
   const fetchHeaders: Record<string, string> = {
+    "Accept": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
     ...headers,
   };
 
@@ -382,45 +384,11 @@ export const quotesApi = {
     }),
 
   accept: async (id: string, viewToken?: string) => {
-    if (viewToken) {
-      try {
-        return await apiCall(`/api/public/quotes/${viewToken}/accept`, { method: "POST" });
-      } catch (e: any) {
-        console.log("[API] public accept failed, trying authenticated:", e?.message);
-      }
-    }
-    try {
-      return await apiCall(`/api/quotes/${id}/accept`, { method: "POST" });
-    } catch (e: any) {
-      console.log("[API] /accept failed, trying /respond:", e?.message);
-      try {
-        return await apiCall(`/api/quotes/${id}/respond`, { method: "POST", body: { action: "accept", status: "accepted" } });
-      } catch (e2: any) {
-        console.log("[API] /respond failed, trying PUT status:", e2?.message);
-        return await apiCall(`/api/quotes/${id}`, { method: "PUT", body: { status: "accepted" } });
-      }
-    }
+    return apiCall(`/api/quotes/${id}/accept`, { method: "POST" });
   },
 
   reject: async (id: string, viewToken?: string) => {
-    if (viewToken) {
-      try {
-        return await apiCall(`/api/public/quotes/${viewToken}/reject`, { method: "POST" });
-      } catch (e: any) {
-        console.log("[API] public reject failed, trying authenticated:", e?.message);
-      }
-    }
-    try {
-      return await apiCall(`/api/quotes/${id}/reject`, { method: "POST" });
-    } catch (e: any) {
-      console.log("[API] /reject failed, trying /respond:", e?.message);
-      try {
-        return await apiCall(`/api/quotes/${id}/respond`, { method: "POST", body: { action: "reject", status: "rejected" } });
-      } catch (e2: any) {
-        console.log("[API] /respond failed, trying PUT status:", e2?.message);
-        return await apiCall(`/api/quotes/${id}`, { method: "PUT", body: { status: "rejected" } });
-      }
-    }
+    return apiCall(`/api/quotes/${id}/reject`, { method: "POST" });
   },
 };
 
