@@ -333,6 +333,20 @@ export const quotesApi = {
       method: "POST",
       body: data,
     }),
+
+  accept: (id: string, viewToken?: string) => {
+    if (viewToken) {
+      return apiCall(`/api/public/quotes/${viewToken}/accept`, { method: "POST" });
+    }
+    return apiCall(`/api/quotes/${id}/accept`, { method: "POST" });
+  },
+
+  reject: (id: string, viewToken?: string) => {
+    if (viewToken) {
+      return apiCall(`/api/public/quotes/${viewToken}/reject`, { method: "POST" });
+    }
+    return apiCall(`/api/quotes/${id}/reject`, { method: "POST" });
+  },
 };
 
 export const invoicesApi = {
@@ -344,6 +358,14 @@ export const reservationsApi = {
   getAll: () => apiCall<Reservation[]>("/api/reservations"),
   getById: (id: string) => apiCall<Reservation>(`/api/reservations/${id}`),
   getServices: (id: string) => apiCall<any[]>(`/api/reservations/${id}/services`),
+  create: (data: {
+    quoteId?: string;
+    serviceId?: string;
+    scheduledDate: string;
+    timeSlot: string;
+    notes?: string;
+    vehicleInfo?: any;
+  }) => apiCall<Reservation>("/api/reservations", { method: "POST", body: data }),
 };
 
 export interface Notification {
