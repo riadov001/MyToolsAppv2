@@ -54,50 +54,52 @@ export default function NewQuoteScreen() {
     }
   };
 
+  const MAX_PHOTOS = 3;
+
+  const uploadOnePhoto = async (uri: string): Promise<UploadedPhoto | null> => {
+    const filename = uri.split("/").pop() || `photo_${Date.now()}.jpg`;
+    const type = "image/jpeg";
+    try {
+      const uploadResult = await uploadApi.upload(uri, filename, type);
+      const photoKey = uploadResult?.id || uploadResult?.objectPath || uploadResult?.key || uploadResult?.path || uploadResult?.url;
+      return { uri, key: photoKey ? String(photoKey) : `upload_${Date.now()}` };
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showAlert({ type: 'error', title: "Erreur d'upload", message: `Impossible d'uploader une image: ${err.message}`, buttons: [{ text: 'OK', style: 'primary' }] });
+      return null;
+    }
+  };
+
   const pickImages = async () => {
+    if (photos.length >= MAX_PHOTOS) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       showAlert({ type: 'warning', title: 'Permission requise', message: 'Veuillez autoriser l\'accès à votre galerie.', buttons: [{ text: 'OK', style: 'primary' }] });
       return;
     }
 
+    const remaining = MAX_PHOTOS - photos.length;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: remaining > 1,
       quality: 0.7,
-      selectionLimit: 1,
+      selectionLimit: remaining,
     });
 
     if (!result.canceled && result.assets.length > 0) {
       setUploading(true);
-      const newPhotos: UploadedPhoto[] = [];
-
-      for (let idx = 0; idx < result.assets.length; idx++) {
-        const asset = result.assets[idx];
-        const uri = asset.uri;
-        const filename = uri.split("/").pop() || `photo_${Date.now()}.jpg`;
-        const type = "image/jpeg";
-        try {
-          const uploadResult = await uploadApi.upload(uri, filename, type);
-          console.log("DEBUG: Upload result", JSON.stringify(uploadResult));
-          const photoKey = uploadResult?.id || uploadResult?.objectPath || uploadResult?.key || uploadResult?.path || uploadResult?.url;
-          if (photoKey) {
-            newPhotos.push({ uri, key: String(photoKey) });
-          } else {
-            newPhotos.push({ uri, key: `upload_${Date.now()}_${idx}` });
-          }
-        } catch (err: any) {
-          console.error("Upload error details:", err);
-          showAlert({ type: 'error', title: "Erreur d'upload", message: `Impossible d'uploader une image: ${err.message}`, buttons: [{ text: 'OK', style: 'primary' }] });
-        }
+      const uploaded: UploadedPhoto[] = [];
+      for (const asset of result.assets) {
+        const photo = await uploadOnePhoto(asset.uri);
+        if (photo) uploaded.push(photo);
       }
-
-      setPhotos(newPhotos);
+      setPhotos((prev) => [...prev, ...uploaded].slice(0, MAX_PHOTOS));
       setUploading(false);
     }
   };
 
   const takePhoto = async () => {
+    if (photos.length >= MAX_PHOTOS) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       showAlert({ type: 'warning', title: 'Permission requise', message: 'Veuillez autoriser l\'accès à la caméra.', buttons: [{ text: 'OK', style: 'primary' }] });
@@ -111,24 +113,8 @@ export default function NewQuoteScreen() {
 
     if (!result.canceled && result.assets.length > 0) {
       setUploading(true);
-      const asset = result.assets[0];
-      const uri = asset.uri;
-      const filename = uri.split("/").pop() || `photo_${Date.now()}.jpg`;
-      const type = "image/jpeg";
-      try {
-        const uploadResult = await uploadApi.upload(uri, filename, type);
-        console.log("Upload result for", filename, ":", uploadResult);
-        const photoKey = uploadResult?.id || uploadResult?.objectPath || uploadResult?.key || uploadResult?.path || uploadResult?.url;
-        if (photoKey) {
-          setPhotos([{ uri, key: String(photoKey) }]);
-        } else {
-          console.warn("Upload response without path:", JSON.stringify(uploadResult));
-          setPhotos([{ uri, key: `upload_${Date.now()}` }]);
-        }
-      } catch (err: any) {
-        console.error("Upload error details:", err);
-        showAlert({ type: 'error', title: "Erreur d'upload", message: `Impossible d'uploader la photo: ${err.message}`, buttons: [{ text: 'OK', style: 'primary' }] });
-      }
+      const photo = await uploadOnePhoto(result.assets[0].uri);
+      if (photo) setPhotos((prev) => [...prev, photo].slice(0, MAX_PHOTOS));
       setUploading(false);
     }
   };
@@ -140,6 +126,10 @@ export default function NewQuoteScreen() {
   const handleSubmit = async () => {
     if (selectedServices.length === 0) {
       showAlert({ type: 'error', title: 'Erreur', message: 'Veuillez sélectionner au moins un service.', buttons: [{ text: 'OK', style: 'primary' }] });
+      return;
+    }
+    if (photos.length < MAX_PHOTOS) {
+      showAlert({ type: 'warning', title: 'Photos requises', message: `Veuillez ajouter ${MAX_PHOTOS} photos de vos jantes (${photos.length}/${MAX_PHOTOS} ajoutées).`, buttons: [{ text: 'OK', style: 'primary' }] });
       return;
     }
 
@@ -195,13 +185,8 @@ export default function NewQuoteScreen() {
     }
   };
 
-    const canSubmit = selectedServices.length > 0 && !submitting;
-    
-    // Safety check for services data
+    const canSubmit = selectedServices.length > 0 && photos.length >= MAX_PHOTOS && !submitting;
     const safeServices = Array.isArray(services) ? services : [];
-    const safePhotos = Array.isArray(photos) ? photos : [];
-    
-    console.log("DEBUG: canSubmit", canSubmit, "services", safeServices.length, "photos", safePhotos.length);
 
   return (
     <View style={styles.container}>
@@ -274,7 +259,7 @@ export default function NewQuoteScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="camera-outline" size={20} color={Colors.primary} />
             <Text style={styles.sectionTitle}>
-              Photo de vos jantes <Text style={styles.required}>(1 photo)</Text>
+              Photos de vos jantes <Text style={styles.required}>({MAX_PHOTOS} requises)</Text>
             </Text>
           </View>
 
@@ -294,7 +279,7 @@ export default function NewQuoteScreen() {
               </View>
             )}
 
-            {photos.length === 0 && !uploading && (
+            {photos.length < MAX_PHOTOS && !uploading && (
               <>
                 <Pressable
                   style={({ pressed }) => [styles.addPhotoBtn, pressed && styles.addPhotoBtnPressed]}
@@ -317,8 +302,10 @@ export default function NewQuoteScreen() {
             )}
           </View>
 
-          <Text style={[styles.photoHint, photos.length >= 1 && styles.photoHintOk]}>
-            {photos.length >= 1 ? "1 photo ajoutée" : "Ajoutez une photo pour un devis plus précis"}
+          <Text style={[styles.photoHint, photos.length >= MAX_PHOTOS && styles.photoHintOk]}>
+            {photos.length >= MAX_PHOTOS
+              ? `✓ ${MAX_PHOTOS} photos ajoutées`
+              : `${photos.length}/${MAX_PHOTOS} photos — ${MAX_PHOTOS - photos.length} photo${MAX_PHOTOS - photos.length > 1 ? "s" : ""} manquante${MAX_PHOTOS - photos.length > 1 ? "s" : ""}`}
           </Text>
         </View>
 

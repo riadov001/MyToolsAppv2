@@ -49,6 +49,10 @@ export default function RegisterScreen() {
       showAlert({ type: 'warning', title: 'Consentement requis', message: 'Veuillez accepter les mentions légales et la politique de confidentialité.', buttons: [{ text: 'OK', style: 'primary' }] });
       return;
     }
+    if (!firstName.trim() || !lastName.trim()) {
+      showAlert({ type: 'error', title: 'Erreur', message: 'Le prénom et le nom sont obligatoires.', buttons: [{ text: 'OK', style: 'primary' }] });
+      return;
+    }
     if (!email.trim() || !password.trim()) {
       showAlert({ type: 'error', title: 'Erreur', message: 'Email et mot de passe sont obligatoires.', buttons: [{ text: 'OK', style: 'primary' }] });
       return;
@@ -200,8 +204,8 @@ export default function RegisterScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informations personnelles</Text>
-          {renderInput("Prénom", firstName, setFirstName, "person-outline", { placeholder: "Votre prénom" })}
-          {renderInput("Nom", lastName, setLastName, "person-outline", { placeholder: "Votre nom" })}
+          {renderInput("Prénom", firstName, setFirstName, "person-outline", { placeholder: "Votre prénom", required: true })}
+          {renderInput("Nom", lastName, setLastName, "person-outline", { placeholder: "Votre nom", required: true })}
           {renderInput("Téléphone", phone, setPhone, "call-outline", {
             placeholder: "06 XX XX XX XX",
             keyboardType: "phone-pad",

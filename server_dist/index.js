@@ -230,6 +230,20 @@ function setupCors(app2) {
   });
 }
 function setupBodyParsing(app2) {
+  app2.use((req, _res, next) => {
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      const chunks = [];
+      req.on("data", (chunk) => chunks.push(chunk));
+      req.on("end", () => {
+        req.rawBody = Buffer.concat(chunks);
+        next();
+      });
+      req.on("error", next);
+    } else {
+      next();
+    }
+  });
   app2.use(
     express.json({
       verify: (req, _res, buf) => {

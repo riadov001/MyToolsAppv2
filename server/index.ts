@@ -53,6 +53,21 @@ function setupCors(app: express.Application) {
 }
 
 function setupBodyParsing(app: express.Application) {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", () => {
+        req.rawBody = Buffer.concat(chunks);
+        next();
+      });
+      req.on("error", next);
+    } else {
+      next();
+    }
+  });
+
   app.use(
     express.json({
       verify: (req, _res, buf) => {
