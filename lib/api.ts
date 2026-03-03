@@ -61,6 +61,10 @@ export async function apiCall<T = any>(
 
   if (sessionCookie) {
     fetchHeaders["Cookie"] = sessionCookie;
+    // On web, we also want to allow the browser to manage cookies if possible
+    if (Platform.OS === "web") {
+      // expo-fetch on web might need credentials: "include" to send/receive cookies
+    }
   }
 
   const url = `${API_BASE}${endpoint}`;

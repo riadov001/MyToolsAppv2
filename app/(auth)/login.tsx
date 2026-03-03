@@ -86,7 +86,7 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim().toLowerCase(), password });
       setTimeout(() => {
         router.replace("/(main)/(tabs)" as any);
       }, 50);

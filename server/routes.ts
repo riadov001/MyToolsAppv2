@@ -123,7 +123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(response.status);
 
       if (response.ok) {
-        const responseData = await response.json() as any;
+        let responseData: any;
+        const text = await response.text();
+        try {
+          responseData = JSON.parse(text);
+        } catch (e) {
+          console.error("Failed to parse login response:", e);
+          return res.status(502).json({ message: "Réponse invalide du serveur d'authentification." });
+        }
+        
         const loggedInUserId = responseData?.id || responseData?.user?.id || responseData?._id;
         const loggedInEmail = responseData?.email || responseData?.user?.email;
 
