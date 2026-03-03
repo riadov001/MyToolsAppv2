@@ -102,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (data: LoginData) => {
     try {
       const result = await authApi.login(data);
+      if (result?.requires2FA) {
+        return result;
+      }
       if (result?.user) {
         setUser(result.user);
       } else if ((result as any)?.id) {
@@ -112,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cookie) {
         await storeToken("session_cookie", cookie);
       }
+      return result;
     } catch (error) {
       console.error("Login error:", error);
       throw error;

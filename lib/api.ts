@@ -230,9 +230,15 @@ export const authApi = {
     }),
 
   login: (data: LoginData) =>
-    apiCall<{ user: UserProfile }>("/api/login", {
+    apiCall<{ user?: UserProfile; requires2FA?: boolean; email?: string }>("/api/login", {
       method: "POST",
       body: data,
+    }),
+
+  verify2FA: (email: string, code: string) =>
+    apiCall<{ user: UserProfile }>("/api/auth/verify-2fa", {
+      method: "POST",
+      body: { email, code },
     }),
 
   logout: () =>
@@ -248,7 +254,7 @@ export const authApi = {
     }),
 
   forgotPassword: (email: string) =>
-    apiCall("/api/auth/forgot-password", {
+    apiCall<{ message: string }>("/api/auth/forgot-password", {
       method: "POST",
       body: { email },
     }),
