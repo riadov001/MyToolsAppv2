@@ -94,29 +94,6 @@ function QuoteCard({ quote, index }: { quote: Quote; index: number }) {
       </View>
 
       <View style={styles.quoteFooter}>
-        <Pressable 
-          style={styles.externalLink} 
-          onPress={(e) => {
-            e.stopPropagation();
-            handleConsultExternal();
-          }}
-        >
-          <Ionicons name="eye-outline" size={14} color={Colors.primary} />
-          <Text style={styles.externalLinkText}>Détails complets</Text>
-        </Pressable>
-        {(quote as any).viewToken && (
-          <Pressable
-            style={styles.pdfLink}
-            onPress={(e) => {
-              e.stopPropagation();
-              const url = `${API_BASE}/api/public/quotes/${(quote as any).viewToken}/pdf`;
-              WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
-            }}
-          >
-            <Ionicons name="document-outline" size={14} color="#3B82F6" />
-            <Text style={styles.pdfLinkText}>PDF</Text>
-          </Pressable>
-        )}
         <View style={styles.viewDetailRow}>
           <Text style={styles.viewDetailText}>Voir détail</Text>
           <Ionicons name="chevron-forward" size={14} color={Colors.primary} />

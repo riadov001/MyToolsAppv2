@@ -451,20 +451,6 @@ export default function QuoteDetailScreen() {
         ) : null}
 
         <View style={styles.footerActions}>
-          {viewToken && (
-            <>
-              <Pressable style={styles.btnConsult} onPress={handleConsultExternal}>
-                <Ionicons name="open-outline" size={18} color={Colors.text} />
-                <Text style={styles.btnConsultText}>Voir sur le portail web</Text>
-              </Pressable>
-
-              <Pressable style={styles.btnPdf} onPress={handleDownloadPdf}>
-                <Ionicons name="document-outline" size={18} color="#3B82F6" />
-                <Text style={styles.btnPdfText}>Télécharger PDF</Text>
-              </Pressable>
-            </>
-          )}
-
           {canRespond && (
             <View style={styles.responseRow}>
               <Pressable

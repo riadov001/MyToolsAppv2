@@ -289,14 +289,7 @@ export default function InvoiceDetailScreen() {
           </View>
         ) : null}
 
-        {viewToken && (
-          <View style={styles.footerActions}>
-            <Pressable style={styles.btnPdf} onPress={handleDownloadPdf}>
-              <Ionicons name="document-outline" size={18} color="#3B82F6" />
-              <Text style={styles.btnPdfText}>Télécharger PDF</Text>
-            </Pressable>
-          </View>
-        )}
+        
       </ScrollView>
     </View>
   );

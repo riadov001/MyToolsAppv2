@@ -196,19 +196,19 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await authApi.updateUser({
-        firstName: firstName.trim() || null,
-        lastName: lastName.trim() || null,
-        phone: phone.trim() || null,
-        address: address.trim() || null,
-        postalCode: postalCode.trim() || null,
-        city: city.trim() || null,
-        companyName: companyName.trim() || null,
-        siret: siret.trim() || null,
-        tvaNumber: tvaNumber.trim() || null,
-        companyAddress: companyAddress.trim() || null,
-        companyPostalCode: companyPostalCode.trim() || null,
-        companyCity: companyCity.trim() || null,
-        companyCountry: companyCountry.trim() || null,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        postalCode: postalCode.trim(),
+        city: city.trim(),
+        companyName: companyName.trim(),
+        siret: siret.trim(),
+        tvaNumber: tvaNumber.trim(),
+        companyAddress: companyAddress.trim(),
+        companyPostalCode: companyPostalCode.trim(),
+        companyCity: companyCity.trim(),
+        companyCountry: companyCountry.trim(),
       });
       await refreshUser();
       setEditing(false);
@@ -353,7 +353,22 @@ export default function ProfileScreen() {
             )}
 
             {editing && (
-              <Pressable style={styles.cancelBtn} onPress={() => setEditing(false)}>
+              <Pressable style={styles.cancelBtn} onPress={() => {
+                setFirstName(user?.firstName || "");
+                setLastName(user?.lastName || "");
+                setPhone(user?.phone || "");
+                setAddress(user?.address || "");
+                setPostalCode(user?.postalCode || "");
+                setCity(user?.city || "");
+                setCompanyName(user?.companyName || "");
+                setSiret(user?.siret || "");
+                setTvaNumber(user?.tvaNumber || "");
+                setCompanyAddress(user?.companyAddress || "");
+                setCompanyPostalCode(user?.companyPostalCode || "");
+                setCompanyCity(user?.companyCity || "");
+                setCompanyCountry(user?.companyCountry || "France");
+                setEditing(false);
+              }}>
                 <Text style={styles.cancelBtnText}>Annuler les modifications</Text>
               </Pressable>
             )}
