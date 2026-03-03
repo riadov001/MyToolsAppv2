@@ -224,6 +224,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(response.status);
       const body = await response.arrayBuffer();
+      const debugEndpoints = ["/invoices", "/quotes", "/reservations", "/services"];
+      const shouldLog = debugEndpoints.some(ep => req.url === ep || req.url.startsWith(ep + "?") || req.url.startsWith(ep + "/"));
+      if (shouldLog) {
+        try {
+          const text = Buffer.from(body).toString("utf-8");
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`[DEBUG] ${req.method} /api${req.url} => Array[${parsed.length}], first item keys:`, Object.keys(parsed[0]), "first item sample:", JSON.stringify(parsed[0]).slice(0, 800));
+          } else if (parsed && typeof parsed === "object") {
+            const dataArr = parsed.data || parsed.results || parsed.items || parsed.invoices || parsed.quotes || parsed.reservations || parsed.services;
+            if (Array.isArray(dataArr) && dataArr.length > 0) {
+              console.log(`[DEBUG] ${req.method} /api${req.url} => wrapped Array[${dataArr.length}], wrapper keys:`, Object.keys(parsed), "first item keys:", Object.keys(dataArr[0]), "first item sample:", JSON.stringify(dataArr[0]).slice(0, 800));
+            } else {
+              console.log(`[DEBUG] ${req.method} /api${req.url} => Object keys:`, Object.keys(parsed), "sample:", JSON.stringify(parsed).slice(0, 800));
+            }
+          }
+        } catch {}
+      }
       res.send(Buffer.from(body));
     } catch (err: any) {
       console.error("API proxy error:", err.message);
