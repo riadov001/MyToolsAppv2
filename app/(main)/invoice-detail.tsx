@@ -17,7 +17,7 @@ import * as Linking from "expo-linking";
 import { invoicesApi } from "@/lib/api";
 import Colors from "@/constants/colors";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || "https://appmyjantes5.mytoolsgroup.eu";
+const API_BASE = "https://appmyjantes1.mytoolsgroup.eu";
 
 function getInvoiceStatusInfo(status: string) {
   const s = status?.toLowerCase() || "";
