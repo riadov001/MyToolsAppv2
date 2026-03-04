@@ -136,12 +136,6 @@ export default function ReservationsScreen() {
         ]}
       >
         <Text style={styles.headerTitle}>Mes Réservations</Text>
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
-          onPress={() => router.push("/(main)/request-reservation")}
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-        </Pressable>
       </View>
 
       {isLoading ? (

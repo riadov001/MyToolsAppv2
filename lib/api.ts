@@ -16,6 +16,10 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+export function getBackendUrl() {
+  return API_BASE;
+}
+
 interface ApiOptions {
   method?: string;
   body?: any;
@@ -462,6 +466,15 @@ export const chatApi = {
       method: "POST",
       body: { content },
     }),
+  sendMessageWithImage: async (conversationId: string, imageUri: string, imageFilename: string, imageType: string) => {
+    const uploaded = await uploadApi.upload(imageUri, imageFilename, imageType);
+    const imageUrl = uploaded?.url || uploaded?.key || uploaded?.objectPath || uploaded?.path || "";
+    const content = imageUrl ? `[image]${imageUrl}[/image]` : imageUri;
+    return apiCall<ChatMessage>(`/api/chat/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: { content },
+    });
+  },
   getUsers: () => apiCall<any[]>("/api/chat/users"),
 };
 
@@ -681,5 +694,16 @@ export const supportApi = {
       method: "POST",
       body: data,
     }),
+  getHistory: async () => {
+    try {
+      const result = await apiCall<any>("/api/support/tickets");
+      if (Array.isArray(result)) return result;
+      if (result && Array.isArray(result.data)) return result.data;
+      if (result && Array.isArray(result.tickets)) return result.tickets;
+      return [];
+    } catch {
+      return [];
+    }
+  },
 };
 

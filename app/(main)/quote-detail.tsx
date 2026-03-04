@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import { quotesApi, Quote } from "@/lib/api";
+import { quotesApi, reservationsApi, getBackendUrl, Quote } from "@/lib/api";
 import Colors from "@/constants/colors";
 import { useCustomAlert } from "@/components/CustomAlert";
 
@@ -95,6 +95,12 @@ export default function QuoteDetailScreen() {
       return list.find((q) => q.id === id) || null;
     },
     enabled: !!id,
+  });
+
+  const { data: allReservations = [] } = useQuery({
+    queryKey: ["reservations"],
+    queryFn: reservationsApi.getAll,
+    retry: 1,
   });
 
   if (isLoading) {
@@ -188,8 +194,14 @@ export default function QuoteDetailScreen() {
   const canRespond = statusLower === "approved" || statusLower === "approuvé" || statusLower === "sent" || statusLower === "envoyé" || statusLower === "envoyee";
 
   const pdfUrl = viewToken
-    ? `${EXTERNAL_API_BASE}/api/public/quotes/${viewToken}/pdf`
+    ? `${getBackendUrl()}/api/proxy/quote-pdf/${viewToken}`
     : null;
+
+  const existingReservation = (allReservations as any[]).find(
+    (r) => r.quoteId === id || r.quoteId === quote?.id
+  );
+  const hasExistingReservation = !!existingReservation;
+  const existingReservationStatus = existingReservation?.status?.toLowerCase() || "";
 
   const formattedExpiry = expiryDate
     ? new Date(expiryDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
@@ -562,7 +574,23 @@ export default function QuoteDetailScreen() {
             </View>
           )}
 
-          {isAccepted && (
+          {isAccepted && hasExistingReservation && (
+            <Pressable
+              style={({ pressed }) => [styles.btnReservation, { backgroundColor: "#F59E0B" }, pressed && { opacity: 0.85 }]}
+              onPress={() => router.push({ pathname: "/(main)/reservation-detail", params: { id: existingReservation.id } })}
+            >
+              <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.btnReservationText}>
+                {existingReservationStatus === "confirmed" || existingReservationStatus === "confirmée" || existingReservationStatus === "confirmé"
+                  ? "Réservation confirmée — voir"
+                  : existingReservationStatus === "cancelled" || existingReservationStatus === "annulée"
+                  ? "Réservation annulée — voir"
+                  : "Réservation en attente de traitement"}
+              </Text>
+            </Pressable>
+          )}
+
+          {isAccepted && !hasExistingReservation && (
             <Pressable
               style={({ pressed }) => [styles.btnReservation, pressed && styles.btnReservationPressed]}
               onPress={handleRequestReservation}

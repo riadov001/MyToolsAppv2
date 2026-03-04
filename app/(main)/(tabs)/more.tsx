@@ -55,8 +55,15 @@ export default function MoreScreen() {
           <MenuItem
             icon="chatbubbles-outline"
             title="Nous contacter"
-            subtitle="Accéder au support en ligne"
+            subtitle="Envoyer un message à l'équipe"
             onPress={() => router.push("/support")}
+          />
+          <MenuItem
+            icon="time-outline"
+            title="Historique des demandes"
+            subtitle="Voir toutes vos demandes support"
+            onPress={() => router.push("/(main)/support-history")}
+            iconColor="#8B5CF6"
           />
           <MenuItem
             icon="mail-outline"

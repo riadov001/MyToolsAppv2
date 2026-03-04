@@ -180,6 +180,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/proxy/invoice-pdf/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const pdfUrl = `${EXTERNAL_API}/api/public/invoices/${token}/pdf`;
+      const headers: Record<string, string> = {
+        "host": new URL(EXTERNAL_API).host,
+        "accept": "application/pdf,*/*",
+      };
+      if (req.headers["cookie"]) {
+        headers["cookie"] = req.headers["cookie"] as string;
+      }
+      if (req.headers["authorization"]) {
+        headers["authorization"] = req.headers["authorization"] as string;
+      }
+      const response = await fetch(pdfUrl, { headers, redirect: "follow" });
+      if (!response.ok) {
+        return res.status(response.status).json({ message: "Document introuvable." });
+      }
+      const contentType = response.headers.get("content-type") || "application/pdf";
+      res.setHeader("content-type", contentType);
+      res.setHeader("content-disposition", `attachment; filename="facture-${token}.pdf"`);
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } catch (err: any) {
+      console.error("[PDF PROXY] error:", err.message);
+      res.status(502).json({ message: "Erreur lors du téléchargement du PDF." });
+    }
+  });
+
+  app.get("/api/proxy/quote-pdf/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const pdfUrl = `${EXTERNAL_API}/api/public/quotes/${token}/pdf`;
+      const headers: Record<string, string> = {
+        "host": new URL(EXTERNAL_API).host,
+        "accept": "application/pdf,*/*",
+      };
+      if (req.headers["cookie"]) {
+        headers["cookie"] = req.headers["cookie"] as string;
+      }
+      if (req.headers["authorization"]) {
+        headers["authorization"] = req.headers["authorization"] as string;
+      }
+      const response = await fetch(pdfUrl, { headers, redirect: "follow" });
+      if (!response.ok) {
+        return res.status(response.status).json({ message: "Document introuvable." });
+      }
+      const contentType = response.headers.get("content-type") || "application/pdf";
+      res.setHeader("content-type", contentType);
+      res.setHeader("content-disposition", `attachment; filename="devis-${token}.pdf"`);
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } catch (err: any) {
+      console.error("[PDF PROXY] error:", err.message);
+      res.status(502).json({ message: "Erreur lors du téléchargement du PDF." });
+    }
+  });
+
   app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const targetUrl = `${EXTERNAL_API}/api${req.url}`;

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import { invoicesApi } from "@/lib/api";
+import { invoicesApi, getBackendUrl } from "@/lib/api";
 import Colors from "@/constants/colors";
 import { useCustomAlert } from "@/components/CustomAlert";
 
@@ -188,7 +188,7 @@ export default function InvoiceDetailScreen() {
   const isUnpaid = statusLower === "pending" || statusLower === "en_attente"
     || statusLower === "overdue" || statusLower === "en_retard"
     || statusLower === "sent" || statusLower === "envoyee" || statusLower === "envoyée";
-  const pdfUrl = viewToken ? `${API_BASE}/api/public/invoices/${viewToken}/pdf` : null;
+  const pdfUrl = viewToken ? `${getBackendUrl()}/api/proxy/invoice-pdf/${viewToken}` : null;
 
   const handleDownloadPdf = async () => {
     const url = pdfUrl;

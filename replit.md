@@ -54,7 +54,9 @@ app/
     quote-detail.tsx    # Détail d'un devis
     invoice-detail.tsx  # Détail d'une facture
     reservation-detail.tsx # Détail d'une réservation
-    chat-detail.tsx     # Conversation chat
+    chat-detail.tsx     # Conversation chat (avec envoi de photos)
+    request-reservation.tsx # Demande de réservation
+    support-history.tsx # Historique des demandes support
     delete-account.tsx  # Suppression permanente du compte (Apple 5.1.1(v))
   support.tsx           # Formulaire de support
   legal.tsx             # Mentions légales
@@ -133,3 +135,11 @@ server/
 - Mar 3 2026: Quote accept/reject with multi-endpoint fallbacks
 - Mar 3 2026: Invoice/quote amount field name fallbacks (camelCase + snake_case)
 - Mar 3 2026: Server proxy debug logging to /tmp/api_debug_*.json
+- Mar 4 2026: Reservations restricted to accepted quotes only (one per quote, with check)
+- Mar 4 2026: Cancel/modify reservations redirects to support (no direct API cancellation)
+- Mar 4 2026: "Ajouter au calendrier" button in reservation detail (expo-calendar)
+- Mar 4 2026: Secure PDF download proxy routes added to backend (/api/proxy/invoice-pdf/:token, /api/proxy/quote-pdf/:token)
+- Mar 4 2026: Photo sending in chat (expo-image-picker, upload, send as [image]url[/image] tag)
+- Mar 4 2026: Support history screen added (GET /api/support/tickets)
+- Mar 4 2026: "Historique des demandes" link in More tab
+- Mar 4 2026: DB calls in delete account route wrapped in try-catch (non-blocking)

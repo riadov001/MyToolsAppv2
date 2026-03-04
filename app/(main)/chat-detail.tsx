@@ -8,12 +8,14 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { chatApi, ChatConversation, ChatMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import Colors from "@/constants/colors";
@@ -25,6 +27,15 @@ function formatTime(dateStr: string) {
   });
 }
 
+function isImageContent(content: string) {
+  return content.startsWith("[image]") && content.includes("[/image]");
+}
+
+function extractImageUrl(content: string) {
+  const match = content.match(/\[image\](.*?)\[\/image\]/);
+  return match ? match[1] : null;
+}
+
 function MessageBubble({ message, isMe }: { message: ChatMessage; isMe: boolean }) {
   const senderName = isMe
     ? "Vous"
@@ -32,11 +43,22 @@ function MessageBubble({ message, isMe }: { message: ChatMessage; isMe: boolean 
       ? `${message.sender.firstName} ${message.sender.lastName}`
       : "Inconnu";
 
+  const isImg = isImageContent(message.content);
+  const imgUrl = isImg ? extractImageUrl(message.content) : null;
+
   return (
     <View style={[styles.bubbleRow, isMe ? styles.bubbleRowRight : styles.bubbleRowLeft]}>
       <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
         {!isMe && <Text style={styles.senderName}>{senderName}</Text>}
-        <Text style={[styles.messageText, isMe && styles.messageTextMe]}>{message.content}</Text>
+        {isImg && imgUrl ? (
+          <Image
+            source={{ uri: imgUrl }}
+            style={styles.messageImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={[styles.messageText, isMe && styles.messageTextMe]}>{message.content}</Text>
+        )}
         <Text style={[styles.timeText, isMe && styles.timeTextMe]}>{formatTime(message.createdAt)}</Text>
       </View>
     </View>
@@ -49,6 +71,7 @@ export default function ChatDetailScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const { data: conversations = [] } = useQuery({
     queryKey: ["chat-conversations"],
@@ -88,6 +111,37 @@ export default function ChatDetailScreen() {
     const trimmed = messageText.trim();
     if (!trimmed || sendMutation.isPending) return;
     sendMutation.mutate(trimmed);
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.7,
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+      setUploadingImage(true);
+      try {
+        await chatApi.sendMessageWithImage(
+          id!,
+          asset.uri,
+          asset.fileName || `photo_${Date.now()}.jpg`,
+          asset.mimeType || "image/jpeg"
+        );
+        queryClient.invalidateQueries({ queryKey: ["chat-messages", id] });
+        queryClient.invalidateQueries({ queryKey: ["chat-conversations"] });
+      } finally {
+        setUploadingImage(false);
+      }
+    } catch {
+      setUploadingImage(false);
+    }
   };
 
   const bottomPad = Platform.OS === "web" ? 34 : Math.max(insets.bottom, 12);
@@ -141,6 +195,17 @@ export default function ChatDetailScreen() {
           { paddingBottom: bottomPad },
         ]}
       >
+        <Pressable
+          onPress={handlePickImage}
+          disabled={uploadingImage || sendMutation.isPending}
+          style={[styles.attachButton, (uploadingImage || sendMutation.isPending) && { opacity: 0.5 }]}
+          hitSlop={8}
+        >
+          {uploadingImage
+            ? <ActivityIndicator size="small" color={Colors.primary} />
+            : <Ionicons name="image-outline" size={24} color={Colors.primary} />
+          }
+        </Pressable>
         <TextInput
           style={styles.textInput}
           placeholder="Votre message..."
@@ -238,6 +303,12 @@ const styles = StyleSheet.create({
   messageTextMe: {
     color: "#FFFFFF",
   },
+  messageImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
   timeText: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
@@ -257,6 +328,13 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.borderLight,
     backgroundColor: Colors.background,
     gap: 8,
+  },
+  attachButton: {
+    width: 42,
+    height: 42,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 0,
   },
   textInput: {
     flex: 1,

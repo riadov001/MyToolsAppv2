@@ -11,7 +11,8 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Calendar from "expo-calendar";
 import { reservationsApi, servicesApi, apiCall, Reservation } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import Colors from "@/constants/colors";
@@ -91,7 +92,6 @@ export default function ReservationDetailScreen() {
   const queryClient = useQueryClient();
   const { showAlert, AlertComponent } = useCustomAlert();
   const [confirming, setConfirming] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
 
   const { data: allReservationsRaw = [], isLoading } = useQuery({
     queryKey: ["reservations"],
@@ -178,76 +178,94 @@ export default function ReservationDetailScreen() {
   const canModifyOrCancel = hoursUntilStart > 24 && !isCancelled && !isCompleted;
   const isActiveReservation = !isCancelled && !isCompleted;
 
-  const handleModify = () => {
-    if (!canModifyOrCancel) {
-      showAlert({
-        type: "warning",
-        title: "Modification impossible",
-        message: "La réservation ne peut plus être modifiée moins de 24h avant le rendez-vous. Veuillez contacter le support pour toute modification.",
-        buttons: [
-          { text: "OK" },
-          {
-            text: "Contacter le support",
-            style: "primary",
-            onPress: () => router.push("/(main)/(tabs)/messages"),
-          },
-        ],
-      });
-      return;
-    }
-    router.push({
-      pathname: "/(main)/request-reservation",
-      params: {
-        quoteId: (reservation as any).quoteId || "",
-        serviceId: (reservation as any).serviceId || "",
-        quoteName: displayRef,
-        modifyReservationId: id,
-      },
-    });
-  };
-
-  const handleCancelReservation = () => {
-    if (!canModifyOrCancel) {
-      showAlert({
-        type: "warning",
-        title: "Annulation impossible",
-        message: "La réservation ne peut plus être annulée moins de 24h avant le rendez-vous. Veuillez contacter le support pour toute assistance.",
-        buttons: [
-          { text: "OK" },
-          {
-            text: "Contacter le support",
-            style: "primary",
-            onPress: () => router.push("/(main)/(tabs)/messages"),
-          },
-        ],
-      });
-      return;
-    }
+  const handleContactSupportForModify = () => {
     showAlert({
-      type: "warning",
-      title: "Annuler la réservation",
-      message: "Êtes-vous sûr de vouloir annuler cette réservation ? Cette action est irréversible.",
+      type: "info",
+      title: "Modifier la réservation",
+      message: "Pour toute modification de réservation, veuillez contacter notre équipe support qui traitera votre demande dans les meilleurs délais.",
       buttons: [
-        { text: "Retour" },
+        { text: "Plus tard" },
         {
-          text: "Annuler la réservation",
+          text: "Contacter le support",
           style: "primary",
-          onPress: async () => {
-            setCancelling(true);
-            try {
-              await apiCall(`/api/reservations/${id}/cancel`, { method: "POST" });
-              queryClient.invalidateQueries({ queryKey: ["reservations"] });
-              showAlert({ type: "success", title: "Réservation annulée", message: "La réservation a été annulée.", buttons: [{ text: "OK", style: "primary", onPress: () => router.back() }] });
-            } catch (err: any) {
-              console.error("[RESERVATION] cancel error:", err?.message);
-              showAlert({ type: "error", title: "Erreur", message: err?.message || "Impossible d'annuler.", buttons: [{ text: "OK", style: "primary" }] });
-            } finally {
-              setCancelling(false);
-            }
-          },
+          onPress: () => router.push("/(main)/(tabs)/messages"),
         },
       ],
     });
+  };
+
+  const handleContactSupportForCancel = () => {
+    showAlert({
+      type: "warning",
+      title: "Annuler la réservation",
+      message: "L'annulation d'une réservation doit passer par notre équipe support. Contactez-nous et nous traiterons votre demande rapidement.",
+      buttons: [
+        { text: "Retour" },
+        {
+          text: "Contacter le support",
+          style: "primary",
+          onPress: () => router.push("/(main)/(tabs)/messages"),
+        },
+      ],
+    });
+  };
+
+  const handleAddToCalendar = async () => {
+    if (Platform.OS === "web") {
+      showAlert({
+        type: "info",
+        title: "Calendrier",
+        message: "L'ajout au calendrier n'est pas disponible sur navigateur. Notez la date de votre rendez-vous manuellement.",
+        buttons: [{ text: "OK" }],
+      });
+      return;
+    }
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== "granted") {
+        showAlert({
+          type: "warning",
+          title: "Permission refusée",
+          message: "Veuillez autoriser l'accès au calendrier dans les paramètres de votre application.",
+          buttons: [{ text: "OK" }],
+        });
+        return;
+      }
+      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const defaultCalendar = calendars.find((c) => c.allowsModifications) || calendars[0];
+      if (!defaultCalendar) {
+        showAlert({ type: "error", title: "Erreur", message: "Aucun calendrier disponible.", buttons: [{ text: "OK" }] });
+        return;
+      }
+      const eventStart = startDate ? new Date(startDate) : new Date();
+      const eventEnd = endDate ? new Date(endDate) : new Date(eventStart.getTime() + 2 * 60 * 60 * 1000);
+      const title = linkedService?.name
+        ? `MyJantes — ${linkedService.name}`
+        : `MyJantes — Réservation ${displayRef}`;
+      const notes = [
+        linkedService?.name ? `Service : ${linkedService.name}` : null,
+        vehicleInfo && typeof vehicleInfo === "object"
+          ? `Véhicule : ${vehicleInfo.marque || vehicleInfo.brand || ""} ${vehicleInfo.modele || vehicleInfo.model || ""}`.trim()
+          : null,
+        reservation.notes ? `Notes : ${reservation.notes}` : null,
+      ].filter(Boolean).join("\n");
+      await Calendar.createEventAsync(defaultCalendar.id, {
+        title,
+        startDate: eventStart,
+        endDate: eventEnd,
+        notes: notes || undefined,
+        alarms: [{ relativeOffset: -60 }, { relativeOffset: -1440 }],
+      });
+      showAlert({
+        type: "success",
+        title: "Ajouté au calendrier",
+        message: "Votre rendez-vous a été ajouté à votre calendrier avec un rappel la veille et 1h avant.",
+        buttons: [{ text: "OK" }],
+      });
+    } catch (err: any) {
+      console.error("[CALENDAR] error:", err.message);
+      showAlert({ type: "error", title: "Erreur", message: "Impossible d'ajouter au calendrier.", buttons: [{ text: "OK" }] });
+    }
   };
 
   const handleConfirm = () => {
@@ -467,13 +485,9 @@ export default function ReservationDetailScreen() {
             <View style={styles.actionsRow}>
               <Pressable
                 style={({ pressed }) => [styles.actionBtnSecondary, pressed && { opacity: 0.7 }]}
-                onPress={handleCancelReservation}
-                disabled={cancelling}
+                onPress={handleContactSupportForCancel}
               >
-                {cancelling
-                  ? <ActivityIndicator size="small" color={Colors.primary} />
-                  : <Text style={styles.actionBtnSecondaryText}>Refuser</Text>
-                }
+                <Text style={styles.actionBtnSecondaryText}>Refuser</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [styles.actionBtnPrimary, pressed && { opacity: 0.7 }]}
@@ -491,21 +505,13 @@ export default function ReservationDetailScreen() {
 
         {isActiveReservation && !isPendingClientAction && (
           <View style={styles.actionsSection}>
-            {!canModifyOrCancel && (
-              <View style={[styles.actionsBanner, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
-                <Ionicons name="lock-closed" size={18} color="#DC2626" />
-                <Text style={[styles.actionsBannerText, { color: "#991B1B" }]}>
-                  Cette réservation ne peut plus être modifiée car le rendez-vous est dans moins de 24h. Contactez le support pour toute assistance.
-                </Text>
-              </View>
-            )}
             <View style={styles.actionsRow}>
               <Pressable
                 style={({ pressed }) => [styles.actionBtnSecondary, pressed && { opacity: 0.7 }]}
-                onPress={handleModify}
+                onPress={handleContactSupportForModify}
               >
-                <Ionicons name="create-outline" size={16} color={Colors.text} style={{ marginRight: 4 }} />
-                <Text style={styles.actionBtnSecondaryText}>Modifier</Text>
+                <Ionicons name="create-outline" size={16} color={Colors.primary} style={{ marginRight: 4 }} />
+                <Text style={[styles.actionBtnSecondaryText, { color: Colors.primary }]}>Modifier</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [
@@ -513,19 +519,23 @@ export default function ReservationDetailScreen() {
                   { borderColor: "#FCA5A5" },
                   pressed && { opacity: 0.7 },
                 ]}
-                onPress={handleCancelReservation}
-                disabled={cancelling}
+                onPress={handleContactSupportForCancel}
               >
-                {cancelling
-                  ? <ActivityIndicator size="small" color="#DC2626" />
-                  : <>
-                      <Ionicons name="close-circle-outline" size={16} color="#DC2626" style={{ marginRight: 4 }} />
-                      <Text style={[styles.actionBtnSecondaryText, { color: "#DC2626" }]}>Annuler</Text>
-                    </>
-                }
+                <Ionicons name="close-circle-outline" size={16} color="#DC2626" style={{ marginRight: 4 }} />
+                <Text style={[styles.actionBtnSecondaryText, { color: "#DC2626" }]}>Annuler</Text>
               </Pressable>
             </View>
           </View>
+        )}
+
+        {isActiveReservation && startDate && (
+          <Pressable
+            style={({ pressed }) => [styles.calendarBtn, pressed && { opacity: 0.8 }]}
+            onPress={handleAddToCalendar}
+          >
+            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+            <Text style={styles.calendarBtnText}>Ajouter au calendrier</Text>
+          </Pressable>
         )}
       </ScrollView>
       {AlertComponent}
@@ -729,5 +739,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
+  },
+  calendarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  calendarBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
 });
