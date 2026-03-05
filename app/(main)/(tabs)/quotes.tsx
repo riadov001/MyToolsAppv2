@@ -14,7 +14,7 @@ import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { FloatingSupport } from "@/components/FloatingSupport";
 
-const API_BASE = "https://saas2.mytoolsgroup.eu";
+const API_BASE = "https://apps.mytoolsgroup.eu";
 
 function getStatusInfo(status: string, isDark: boolean) {
   const s = status?.toLowerCase() || "";

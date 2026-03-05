@@ -84,10 +84,8 @@ outputType = "console"
 
 [userenv.development]
 PORT = "8081"
-EXTERNAL_API_URL = "https://saas2.mytoolsgroup.eu/api"
 
 [userenv.production]
 PORT = "8081"
-EXTERNAL_API_URL = "https://saas2.mytoolsgroup.eu/api"
 
 [userenv.shared]

@@ -21,7 +21,7 @@ import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
 
-const API_BASE = "https://saas2.mytoolsgroup.eu";
+const API_BASE = "https://apps.mytoolsgroup.eu";
 
 function getInvoiceStatusInfo(status: string, isDark: boolean) {
   const s = status?.toLowerCase() || "";
