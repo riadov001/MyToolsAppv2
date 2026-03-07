@@ -200,11 +200,11 @@ export const adminReservations = {
 };
 
 export const adminClients = {
-  getAll: () => adminApiCall<any[]>("/api/admin/clients"),
-  getById: (id: string) => adminApiCall<any>(`/api/admin/clients/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/admin/clients", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/admin/clients/${id}`, { method: "PATCH", body: data }),
-  delete: (id: string) => adminApiCall<any>(`/api/admin/clients/${id}`, { method: "DELETE" }),
+  getAll: () => adminApiCall<any[]>("/api/admin/users"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/users/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/users", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/admin/users/${id}`, { method: "PATCH", body: data }),
+  delete: (id: string) => adminApiCall<any>(`/api/admin/users/${id}`, { method: "DELETE" }),
 };
 
 export const adminServices = {
