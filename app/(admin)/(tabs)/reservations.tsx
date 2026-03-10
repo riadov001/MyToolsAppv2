@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import {
-  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, TextInput, ActivityIndicator,
+  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, TextInput, ActivityIndicator, ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,12 +14,37 @@ import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
 
-const STATUSES = ["all", "pending", "confirmed", "cancelled", "completed"] as const;
-const STATUS_LABELS: Record<string, string> = { all: "Tous", pending: "En attente", confirmed: "Confirmé", cancelled: "Annulé", completed: "Terminé" };
-const STATUS_COLORS: Record<string, string> = { pending: "#F59E0B", confirmed: "#22C55E", cancelled: "#EF4444", completed: "#3B82F6" };
+const STATUS_LABELS: Record<string, string> = {
+  all: "Tous", pending: "En attente", confirmed: "Confirmé",
+  cancelled: "Annulé", completed: "Terminé",
+};
+const STATUS_COLORS: Record<string, string> = {
+  pending: "#F59E0B", confirmed: "#22C55E", cancelled: "#EF4444", completed: "#3B82F6",
+};
 
-const ROOT_ROLES = ["root", "root_admin"];
-const SUPER_ROLES = ["super_admin", "superadmin"];
+const MONTHS_FR = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+const DAYS_FR = ["L", "M", "M", "J", "V", "S", "D"];
+
+function buildCalendarDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: Array<{ day: number | null; dateKey: string | null }> = [];
+  for (let i = 0; i < offset; i++) days.push({ day: null, dateKey: null });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    days.push({ day: d, dateKey });
+  }
+  return days;
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export default function AdminReservationsScreen() {
   const insets = useSafeAreaInsets();
@@ -30,6 +55,10 @@ export default function AdminReservationsScreen() {
   const loggedGarageId = (user as any)?.garageId || null;
   const { showAlert, AlertComponent } = useCustomAlert();
   const queryClient = useQueryClient();
+
+  const [viewMode, setViewMode] = useState<"agenda" | "list">("agenda");
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
 
@@ -68,68 +97,109 @@ export default function AdminReservationsScreen() {
     });
   };
 
-  const arr = Array.isArray(reservations) ? reservations : [];
-  const filtered = arr.filter((r: any) => {
-    if (loggedRole === "admin" && loggedGarageId && r.garageId && r.garageId !== loggedGarageId) return false;
-    if (filter !== "all" && r.status?.toLowerCase() !== filter) return false;
-    if (search) {
-      const s = search.toLowerCase();
-      const name = `${r.client?.firstName || ""} ${r.client?.lastName || ""}`.toLowerCase();
-      return name.includes(s) || (r.vehicleMake || "").toLowerCase().includes(s);
+  const arr = useMemo(() => Array.isArray(reservations) ? reservations : [], [reservations]);
+
+  const byDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    arr.forEach((r: any) => {
+      if (r.scheduledDate) {
+        const key = r.scheduledDate.split("T")[0];
+        if (!map[key]) map[key] = [];
+        map[key].push(r);
+      }
+    });
+    return map;
+  }, [arr]);
+
+  const filteredList = useMemo(() => {
+    return arr.filter((r: any) => {
+      if (loggedRole === "admin" && loggedGarageId && r.garageId && r.garageId !== loggedGarageId) return false;
+      if (filter !== "all" && r.status?.toLowerCase() !== filter) return false;
+      if (search) {
+        const s = search.toLowerCase();
+        const name = `${r.client?.firstName || ""} ${r.client?.lastName || ""}`.toLowerCase();
+        return name.includes(s) || (r.vehicleMake || "").toLowerCase().includes(s);
+      }
+      return true;
+    });
+  }, [arr, filter, search, loggedRole, loggedGarageId]);
+
+  const agendaItems = useMemo(() => {
+    const items = byDate[selectedDate] || [];
+    if (loggedRole === "admin" && loggedGarageId) {
+      return items.filter((r: any) => !r.garageId || r.garageId === loggedGarageId);
     }
-    return true;
-  });
+    return items;
+  }, [byDate, selectedDate, loggedRole, loggedGarageId]);
+
+  const calYear = currentMonth.getFullYear();
+  const calMonth = currentMonth.getMonth();
+  const calDays = useMemo(() => buildCalendarDays(calYear, calMonth), [calYear, calMonth]);
+  const today = todayKey();
+
+  const prevMonth = () => setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   const topPad = Platform.OS === "web" ? 67 + 16 : insets.top + 16;
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
+  const renderReservationCard = useCallback(({ item }: { item: any }) => {
     const color = STATUS_COLORS[item.status?.toLowerCase()] || theme.textTertiary;
     const clientName = `${item.client?.firstName || ""} ${item.client?.lastName || ""}`.trim() || "Client";
-    const dateStr = item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "";
+    const dateStr = item.scheduledDate
+      ? new Date(item.scheduledDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "";
     return (
       <Pressable
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
         onPress={() => router.push({ pathname: "/(admin)/reservation-form", params: { id: item.id } } as any)}
       >
-        <View style={styles.cardTop}>
-          <View style={styles.cardLeft}>
-            <Text style={styles.cardTitle}>{clientName}</Text>
-            <Text style={styles.cardSub}>{dateStr}</Text>
-            {item.vehicleMake && <Text style={styles.cardSub}>{item.vehicleMake} {item.vehicleModel || ""}</Text>}
+        <View style={[styles.cardAccent, { backgroundColor: color }]} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardTop}>
+            <View style={styles.cardLeft}>
+              <Text style={styles.cardTitle}>{clientName}</Text>
+              <Text style={styles.cardSub}>{dateStr}</Text>
+              {item.serviceType ? (
+                <Text style={styles.cardService}>{item.serviceType}</Text>
+              ) : null}
+              {item.vehicleMake ? (
+                <Text style={styles.cardSub}>{item.vehicleMake} {item.vehicleModel || ""}</Text>
+              ) : null}
+            </View>
+            <View style={[styles.badge, { backgroundColor: color + "20" }]}>
+              <Text style={[styles.badgeText, { color }]}>{STATUS_LABELS[item.status?.toLowerCase()] || item.status}</Text>
+            </View>
           </View>
-          <View style={[styles.badge, { backgroundColor: color + "20" }]}>
-            <Text style={[styles.badgeText, { color }]}>{STATUS_LABELS[item.status?.toLowerCase()] || item.status}</Text>
-          </View>
+          {isAdmin && (
+            <View style={styles.cardActions}>
+              {item.status?.toLowerCase() === "pending" && (
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: "#22C55E20" }]}
+                  onPress={() => statusMutation.mutate({ id: item.id, status: "confirmed" })}
+                  accessibilityLabel="Confirmer"
+                >
+                  <Ionicons name="checkmark" size={16} color="#22C55E" />
+                </Pressable>
+              )}
+              {item.status?.toLowerCase() === "confirmed" && (
+                <Pressable
+                  style={[styles.actionBtn, { backgroundColor: "#3B82F620" }]}
+                  onPress={() => statusMutation.mutate({ id: item.id, status: "completed" })}
+                  accessibilityLabel="Terminer"
+                >
+                  <Ionicons name="checkmark-done" size={16} color="#3B82F6" />
+                </Pressable>
+              )}
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: "#EF444420" }]}
+                onPress={() => confirmDelete(item.id, clientName)}
+                accessibilityLabel="Supprimer"
+              >
+                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+              </Pressable>
+            </View>
+          )}
         </View>
-        {isAdmin && (
-          <View style={styles.cardActions}>
-            {item.status?.toLowerCase() === "pending" && (
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: "#22C55E20" }]}
-                onPress={() => statusMutation.mutate({ id: item.id, status: "confirmed" })}
-                accessibilityLabel="Confirmer"
-              >
-                <Ionicons name="checkmark" size={16} color="#22C55E" />
-              </Pressable>
-            )}
-            {(item.status?.toLowerCase() === "confirmed") && (
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: "#3B82F620" }]}
-                onPress={() => statusMutation.mutate({ id: item.id, status: "completed" })}
-                accessibilityLabel="Terminer"
-              >
-                <Ionicons name="checkmark-done" size={16} color="#3B82F6" />
-              </Pressable>
-            )}
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: "#EF444420" }]}
-              onPress={() => confirmDelete(item.id, clientName)}
-              accessibilityLabel="Supprimer"
-            >
-              <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            </Pressable>
-          </View>
-        )}
       </Pressable>
     );
   }, [theme, isAdmin]);
@@ -137,11 +207,7 @@ export default function AdminReservationsScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topPad }]}>
-        <Image
-          source={require("@/assets/images/logo_new.png")}
-          style={styles.headerLogo}
-          contentFit="contain"
-        />
+        <Image source={require("@/assets/images/logo_new.png")} style={styles.headerLogo} contentFit="contain" />
         <Text style={styles.screenTitle}>Rendez-vous</Text>
         <Pressable
           style={styles.addBtn}
@@ -152,38 +218,131 @@ export default function AdminReservationsScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color={theme.textTertiary} />
-          <TextInput style={styles.searchInput} placeholder="Rechercher..." placeholderTextColor={theme.textTertiary} value={search} onChangeText={setSearch} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
-        </View>
-      </View>
-
-      <View style={styles.filterRow}>
-        {STATUSES.map(s => (
-          <Pressable key={s} style={[styles.filterChip, filter === s && { backgroundColor: theme.primary }]} onPress={() => setFilter(s)}>
-            <Text style={[styles.filterText, filter === s && { color: "#fff" }]}>{STATUS_LABELS[s]}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.modeToggle}>
+        <Pressable
+          style={[styles.modeBtn, viewMode === "agenda" && { backgroundColor: theme.primary }]}
+          onPress={() => setViewMode("agenda")}
+        >
+          <Ionicons name="calendar" size={15} color={viewMode === "agenda" ? "#fff" : theme.textSecondary} />
+          <Text style={[styles.modeBtnText, viewMode === "agenda" && { color: "#fff" }]}>Agenda</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.modeBtn, viewMode === "list" && { backgroundColor: theme.primary }]}
+          onPress={() => setViewMode("list")}
+        >
+          <Ionicons name="list" size={15} color={viewMode === "list" ? "#fff" : theme.textSecondary} />
+          <Text style={[styles.modeBtnText, viewMode === "list" && { color: "#fff" }]}>Liste</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
         <View style={styles.center}><ActivityIndicator size="large" color={theme.primary} /></View>
-      ) : (
+      ) : viewMode === "agenda" ? (
         <FlatList
-          data={filtered}
+          data={agendaItems}
           keyExtractor={(item: any) => String(item.id)}
-          renderItem={renderItem}
+          renderItem={renderReservationCard}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Platform.OS === "web" ? 34 + 100 : insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
+          ListHeaderComponent={
+            <View style={styles.calendarCard}>
+              <View style={styles.calendarHeader}>
+                <Pressable onPress={prevMonth} style={styles.calNavBtn} accessibilityLabel="Mois précédent">
+                  <Ionicons name="chevron-back" size={20} color={theme.text} />
+                </Pressable>
+                <Text style={styles.calMonthLabel}>{MONTHS_FR[calMonth]} {calYear}</Text>
+                <Pressable onPress={nextMonth} style={styles.calNavBtn} accessibilityLabel="Mois suivant">
+                  <Ionicons name="chevron-forward" size={20} color={theme.text} />
+                </Pressable>
+              </View>
+              <View style={styles.calDayNames}>
+                {DAYS_FR.map((d, i) => (
+                  <Text key={i} style={styles.calDayName}>{d}</Text>
+                ))}
+              </View>
+              <View style={styles.calGrid}>
+                {calDays.map((cell, idx) => {
+                  if (!cell.dateKey) return <View key={idx} style={styles.calCell} />;
+                  const isSelected = cell.dateKey === selectedDate;
+                  const isToday = cell.dateKey === today;
+                  const dayReservations = byDate[cell.dateKey] || [];
+                  const dotColors = dayReservations
+                    .slice(0, 3)
+                    .map((r: any) => STATUS_COLORS[r.status?.toLowerCase()] || theme.primary);
+                  return (
+                    <Pressable
+                      key={idx}
+                      style={[styles.calCell, isSelected && { backgroundColor: theme.primary, borderRadius: 20 }]}
+                      onPress={() => setSelectedDate(cell.dateKey!)}
+                    >
+                      <Text style={[
+                        styles.calDayNum,
+                        isToday && !isSelected && { color: theme.primary, fontFamily: "Inter_700Bold" },
+                        isSelected && { color: "#fff" },
+                      ]}>
+                        {cell.day}
+                      </Text>
+                      <View style={styles.calDots}>
+                        {dotColors.map((c, di) => (
+                          <View key={di} style={[styles.calDot, { backgroundColor: isSelected ? "#fff" : c }]} />
+                        ))}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          }
+          ListHeaderComponentStyle={{ marginBottom: 12 }}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="calendar-outline" size={48} color={theme.textTertiary} />
-              <Text style={styles.emptyText}>Aucun rendez-vous trouvé</Text>
+              <Ionicons name="calendar-outline" size={40} color={theme.textTertiary} />
+              <Text style={styles.emptyText}>
+                Aucun rendez-vous le{" "}
+                {new Date(selectedDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+              </Text>
             </View>
           }
         />
+      ) : (
+        <>
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search" size={18} color={theme.textTertiary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Rechercher..."
+                placeholderTextColor={theme.textTertiary}
+                value={search}
+                onChangeText={setSearch}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {(["all", "pending", "confirmed", "completed", "cancelled"] as const).map(s => (
+              <Pressable key={s} style={[styles.filterChip, filter === s && { backgroundColor: theme.primary }]} onPress={() => setFilter(s)}>
+                <Text style={[styles.filterText, filter === s && { color: "#fff" }]}>{STATUS_LABELS[s]}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <FlatList
+            data={filteredList}
+            keyExtractor={(item: any) => String(item.id)}
+            renderItem={renderReservationCard}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Platform.OS === "web" ? 34 + 100 : insets.bottom + 100 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Ionicons name="calendar-outline" size={48} color={theme.textTertiary} />
+                <Text style={styles.emptyText}>Aucun rendez-vous trouvé</Text>
+              </View>
+            }
+          />
+        </>
       )}
       {AlertComponent}
     </View>
@@ -192,26 +351,43 @@ export default function AdminReservationsScreen() {
 
 const getStyles = (theme: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background },
-  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 12 },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 10 },
   headerLogo: { width: 34, height: 34, borderRadius: 8 },
   screenTitle: { flex: 1, fontSize: 22, fontFamily: "Michroma_400Regular", color: theme.text, letterSpacing: 0.5 },
   addBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.primary, justifyContent: "center", alignItems: "center" },
-  searchRow: { paddingHorizontal: 16, marginBottom: 10 },
+  modeToggle: { flexDirection: "row", marginHorizontal: 16, marginBottom: 10, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, padding: 3, gap: 3 },
+  modeBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8, borderRadius: 10 },
+  modeBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.textSecondary },
+  calendarCard: { backgroundColor: theme.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.border, padding: 12, marginHorizontal: 16, marginTop: 4 },
+  calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  calNavBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center", borderRadius: 18, backgroundColor: theme.background },
+  calMonthLabel: { fontSize: 16, fontFamily: "Inter_700Bold", color: theme.text },
+  calDayNames: { flexDirection: "row", marginBottom: 4 },
+  calDayName: { flex: 1, textAlign: "center", fontSize: 11, fontFamily: "Inter_600SemiBold", color: theme.textTertiary, paddingVertical: 4 },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: { width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center", paddingVertical: 2 },
+  calDayNum: { fontSize: 13, fontFamily: "Inter_500Medium", color: theme.text },
+  calDots: { flexDirection: "row", gap: 2, marginTop: 2, height: 5 },
+  calDot: { width: 4, height: 4, borderRadius: 2 },
+  searchRow: { paddingHorizontal: 16, marginBottom: 8 },
   searchBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 12, height: 44 },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: theme.text },
-  filterRow: { flexDirection: "row", paddingHorizontal: 16, gap: 8, marginBottom: 12, flexWrap: "wrap" },
+  filterRow: { paddingHorizontal: 16, gap: 8, marginBottom: 12 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: theme.textSecondary },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  card: { backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, padding: 14, marginBottom: 10, gap: 10 },
+  card: { flexDirection: "row", backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, marginBottom: 10, overflow: "hidden" },
+  cardAccent: { width: 4 },
+  cardBody: { flex: 1, padding: 12, gap: 8 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  cardLeft: { flex: 1 },
+  cardLeft: { flex: 1, gap: 2 },
   cardTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.text },
-  cardSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 },
+  cardSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary },
+  cardService: { fontSize: 12, fontFamily: "Inter_500Medium", color: theme.primary },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   cardActions: { flexDirection: "row", gap: 8, justifyContent: "flex-end" },
   actionBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-  empty: { alignItems: "center", paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textTertiary },
+  empty: { alignItems: "center", paddingTop: 40, gap: 10 },
+  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textTertiary, textAlign: "center" },
 });
