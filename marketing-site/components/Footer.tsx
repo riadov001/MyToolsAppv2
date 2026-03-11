@@ -1,91 +1,111 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative border-t border-dark-border">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-red/20 to-transparent" />
+    <footer className="relative border-t border-[#2A2A2A] bg-[#0A0A0A]">
+      {/* Top section */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16">
+        <div className="flex flex-col md:flex-row gap-10 justify-between">
 
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-brand-red rounded-lg flex items-center justify-center">
-                <span className="font-michroma text-white text-xs">MT</span>
+          {/* Brand */}
+          <div className="flex flex-col gap-5 max-w-xs">
+            <div className="flex items-center gap-3">
+              <div className="relative w-8 h-8">
+                <Image src="/logo.png" alt="MyTools" fill className="object-contain" />
               </div>
-              <span className="font-michroma text-text-primary text-sm tracking-widest uppercase">
-                MyTools Admin
-              </span>
+              <span className="font-michroma text-white text-sm tracking-[0.2em] uppercase">MYTOOLS ADMIN</span>
             </div>
-            <p className="text-text-secondary text-sm leading-relaxed max-w-xs">
-              L'application mobile pour les administrateurs de garages partenaires MyTools Group. Built for Performance.
+            <p className="font-michroma text-[#666] text-[10px] tracking-widest leading-relaxed">
+              L'application de gestion de garage réservée aux administrateurs des garages partenaires MyTools Group.
             </p>
-            <div className="mt-6 flex gap-3">
-              <a
-                href="mailto:contact@mytoolsgroup.eu"
-                className="inline-flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-brand-red/40 text-text-secondary hover:text-text-primary text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-              >
-                📧 contact@mytoolsgroup.eu
-              </a>
+            <div className="flex items-center gap-2 bg-green-500/5 border border-green-500/20 rounded-lg px-3 py-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+              <span className="font-michroma text-green-400 text-[9px] tracking-widest uppercase">PWA en ligne — saas.mytoolsgroup.eu</span>
             </div>
           </div>
 
-          <div>
-            <h4 className="text-text-primary font-semibold text-sm mb-4">Application</h4>
-            <ul className="space-y-3">
-              {appLinks.map((l) => (
-                <li key={l.label}>
-                  <a href={l.href} className="text-text-secondary hover:text-text-primary text-sm transition-colors">
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Links */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
+            <div>
+              <h4 className="font-michroma text-white text-[10px] tracking-[0.3em] uppercase mb-4">Produit</h4>
+              <ul className="flex flex-col gap-3">
+                {[
+                  { href: "/#features", label: "Fonctionnalités" },
+                  { href: "/#how-it-works", label: "Comment ça marche" },
+                  { href: "/#contact", label: "Demander l'accès" },
+                ].map((l) => (
+                  <li key={l.label}>
+                    <a href={l.href} className="font-michroma text-[#666] hover:text-white text-[10px] tracking-widest uppercase transition-colors">
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="text-text-primary font-semibold text-sm mb-4">Légal</h4>
-            <ul className="space-y-3">
-              {legalLinks.map((l) => (
-                <li key={l.label}>
-                  <a href={l.href} className="text-text-secondary hover:text-text-primary text-sm transition-colors">
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <h4 className="font-michroma text-white text-[10px] tracking-[0.3em] uppercase mb-4">Application</h4>
+              <ul className="flex flex-col gap-3">
+                {[
+                  { href: "https://saas.mytoolsgroup.eu", label: "Accès PWA", ext: true },
+                  { href: "#", label: "App Store (bientôt)" },
+                  { href: "#", label: "Google Play (bientôt)" },
+                ].map((l) => (
+                  <li key={l.label}>
+                    <a
+                      href={l.href}
+                      target={l.ext ? "_blank" : undefined}
+                      rel={l.ext ? "noopener noreferrer" : undefined}
+                      className="font-michroma text-[#666] hover:text-white text-[10px] tracking-widest uppercase transition-colors"
+                    >
+                      {l.label} {l.ext && "↗"}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-michroma text-white text-[10px] tracking-[0.3em] uppercase mb-4">Légal</h4>
+              <ul className="flex flex-col gap-3">
+                {[
+                  { href: "/privacy", label: "Confidentialité" },
+                  { href: "/support", label: "Support" },
+                  { href: "mailto:contact@mytoolsgroup.eu", label: "Contact" },
+                ].map((l) => (
+                  <li key={l.label}>
+                    <Link href={l.href} className="font-michroma text-[#666] hover:text-white text-[10px] tracking-widest uppercase transition-colors">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-dark-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-text-tertiary text-xs">
+      {/* Bottom bar */}
+      <div className="border-t border-[#2A2A2A] px-4 md:px-8 py-5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="font-michroma text-[#444] text-[9px] tracking-widest uppercase">
             © {year} MyTools Group. Tous droits réservés.
-          </p>
-          <div className="flex items-center gap-6">
-            <span className="text-text-tertiary text-xs flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Hébergé en Europe
-            </span>
-            <span className="text-text-tertiary text-xs">RGPD Conforme</span>
-            <span className="text-text-tertiary text-xs">CNIL Déclaré</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <span className="font-michroma text-[#444] text-[9px] tracking-widest uppercase">Application réservée aux garages partenaires</span>
+            <div className="h-3 w-px bg-[#2A2A2A]" />
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="font-michroma text-green-500 text-[9px] tracking-widest uppercase">PWA Live</span>
+            </div>
           </div>
         </div>
       </div>
     </footer>
   );
 }
-
-const appLinks = [
-  { label: "Fonctionnalités", href: "#features" },
-  { label: "Comment ça marche", href: "#how-it-works" },
-  { label: "Support", href: "/support" },
-  { label: "Demander un accès", href: "mailto:contact@mytoolsgroup.eu?subject=Demande accès MyTools Admin" },
-];
-
-const legalLinks = [
-  { label: "Politique de confidentialité", href: "/privacy" },
-  { label: "Mentions légales", href: "/privacy#mentions" },
-  { label: "RGPD & Vos droits", href: "/privacy#droits" },
-  { label: "Suppression de compte", href: "/privacy#suppression" },
-];

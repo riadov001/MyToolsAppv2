@@ -5,90 +5,101 @@ import { motion } from "framer-motion";
 const steps = [
   {
     number: "01",
-    title: "Rejoignez le réseau MyTools",
-    description:
-      "Contactez le service client MyTools Group pour intégrer le réseau de garages partenaires. Votre compte administrateur est créé et sécurisé par notre équipe.",
-    icon: "🤝",
-    detail: "Accès réservé aux professionnels vérifiés",
+    title: "Demandez votre accès",
+    description: "Remplissez le formulaire de qualification. Nous analysons votre activité et vous proposons le plan le plus adapté sous 24h.",
+    tag: "Qualification",
+    highlight: false,
   },
   {
     number: "02",
-    title: "Téléchargez l'application",
-    description:
-      "Disponible sur l'App Store et le Google Play Store. Connectez-vous avec vos identifiants administrateur. L'interface s'adapte automatiquement à votre thème (clair/sombre).",
-    icon: "📱",
-    detail: "iOS 13+ et Android 8.0+",
+    title: "Accès immédiat à la PWA",
+    description: "Connectez-vous dès maintenant sur saas.mytoolsgroup.eu depuis n'importe quel navigateur. Aucune installation, 100% opérationnel.",
+    tag: "Disponible",
+    highlight: true,
   },
   {
     number: "03",
-    title: "Gérez votre garage en mobilité",
-    description:
-      "Accédez à tous vos outils métier depuis n'importe où. Dashboard en temps réel, création de devis en 30 secondes, suivi des factures, gestion des rendez-vous. Tout, dans votre poche.",
-    icon: "⚡",
-    detail: "Synchronisation instantanée avec le back-office",
+    title: "App mobile sur les stores",
+    description: "L'application iOS et Android arrive bientôt. Gérez votre garage en mobilité totale, avec notifications push et mode hors-ligne.",
+    tag: "Bientôt",
+    highlight: false,
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="relative py-32 bg-dark-surface/30">
-      <div className="absolute inset-0 bg-grid opacity-30" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-dark-border to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-dark-border to-transparent" />
+    <section id="how-it-works" className="relative py-20 md:py-32 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-3 mb-6"
+          >
+            <div className="h-px w-12 bg-[#DC2626]" />
+            <span className="font-michroma text-[#DC2626] text-xs tracking-[0.3em] uppercase">Comment ça marche</span>
+            <div className="h-px w-12 bg-[#DC2626]" />
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="font-michroma text-3xl md:text-5xl text-white tracking-widest uppercase mb-4"
+          >
+            Démarrez en<br />
+            <span className="text-[#DC2626]">moins de 24h</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="font-michroma text-[#666] text-xs tracking-widest"
+          >
+            La PWA est déjà en ligne. L'app mobile arrive bientôt sur App Store et Google Play.
+          </motion.p>
+        </div>
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-20"
-        >
-          <p className="text-brand-red font-michroma text-xs tracking-widest uppercase mb-4">
-            Comment ça marche
-          </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-text-primary mb-6">
-            Simple. Rapide. Professionnel.
-          </h2>
-          <p className="text-text-secondary text-lg max-w-xl mx-auto">
-            Trois étapes pour transformer la gestion de votre garage.
-          </p>
-        </motion.div>
-
-        <div className="grid lg:grid-cols-3 gap-8 relative">
-          <div className="hidden lg:block absolute top-16 left-1/6 right-1/6 h-px bg-gradient-to-r from-transparent via-brand-red/30 to-transparent" />
-
-          {steps.map((step, i) => (
+        <div className="flex flex-col md:flex-row gap-6 md:gap-4">
+          {steps.map((s, i) => (
             <motion.div
-              key={step.number}
-              initial={{ opacity: 0, y: 32 }}
+              key={s.number}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="relative"
+              transition={{ delay: i * 0.15 }}
+              className={`flex-1 relative rounded-2xl p-6 md:p-8 border transition-all ${
+                s.highlight
+                  ? "border-green-500/30 bg-gradient-to-br from-green-500/5 to-[#161616]"
+                  : "border-[#2A2A2A] bg-[#161616]"
+              }`}
             >
-              <div className="bg-dark-surface border border-dark-border rounded-2xl p-8 h-full">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 bg-brand-red/10 border border-brand-red/20 rounded-2xl flex items-center justify-center text-2xl">
-                    {step.icon}
-                  </div>
-                  <span className="font-michroma text-4xl text-brand-red/20 font-bold">
-                    {step.number}
-                  </span>
+              {s.highlight && (
+                <div className="absolute -top-3 left-6 flex items-center gap-1.5 bg-[#0A0A0A] border border-green-500/30 rounded-full px-3 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="font-michroma text-green-400 text-[8px] tracking-widest uppercase">En ligne maintenant</span>
                 </div>
+              )}
 
-                <h3 className="text-xl font-semibold text-text-primary mb-4">
-                  {step.title}
-                </h3>
-                <p className="text-text-secondary leading-relaxed mb-5 text-sm">
-                  {step.description}
-                </p>
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute top-1/2 -right-3 z-10 font-michroma text-[#DC2626] text-lg">→</div>
+              )}
 
-                <div className="inline-flex items-center gap-2 bg-dark-elevated px-3 py-1.5 rounded-full border border-dark-border">
-                  <div className="w-1.5 h-1.5 rounded-full bg-brand-red" />
-                  <span className="text-text-tertiary text-xs">{step.detail}</span>
-                </div>
-              </div>
+              <div className="font-michroma text-5xl tracking-widest opacity-10 mb-4 text-white">{s.number}</div>
+              <h3 className="font-michroma text-white text-sm tracking-widest uppercase mb-3">{s.title}</h3>
+              <p className="font-michroma text-[#666] text-xs tracking-wide leading-relaxed mb-5">{s.description}</p>
+
+              <span className={`font-michroma text-[9px] tracking-widest uppercase px-2.5 py-1 rounded border ${
+                s.highlight
+                  ? "border-green-500/30 text-green-400 bg-green-500/5"
+                  : i === 2
+                  ? "border-[#DC2626]/30 text-[#DC2626]"
+                  : "border-[#2A2A2A] text-[#666]"
+              }`}>
+                {s.tag}
+              </span>
             </motion.div>
           ))}
         </div>
