@@ -256,10 +256,18 @@ export default function FuturisticFeatures() {
               ))}
             </div>
 
-            {/* API badge */}
-            <div className="flex items-center gap-2 pt-2 border-t border-[#2A2A2A]">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="font-michroma text-green-500 text-[9px] tracking-widest uppercase">API REST disponible</span>
+            {/* Endpoint count + API badge */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#2A2A2A]">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="font-michroma text-green-500 text-[9px] tracking-widest uppercase">API REST</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-michroma text-[#444] text-[9px] tracking-widest uppercase">Endpoints</span>
+                <span className="font-michroma font-bold text-sm" style={{ color: mod.color }}>
+                  {mod.endpoints.length}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -317,7 +325,7 @@ export default function FuturisticFeatures() {
         >
           {[
             { value: "8", label: "Modules" },
-            { value: "API REST", label: "Intégration" },
+            { value: "40+", label: "Endpoints" },
             { value: "Swagger", label: "Documentation" },
             { value: "100%", label: "Temps réel" },
           ].map((s) => (
