@@ -56,7 +56,7 @@ export default function AdminReservationsScreen() {
   const { showAlert, AlertComponent } = useCustomAlert();
   const queryClient = useQueryClient();
 
-  const [viewMode, setViewMode] = useState<"agenda" | "list">("agenda");
+  const [viewMode, setViewMode] = useState<"agenda" | "list">("list");
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [search, setSearch] = useState("");

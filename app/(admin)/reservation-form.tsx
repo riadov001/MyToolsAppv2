@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform, ActivityIndicator, FlatList, Modal,
+  View, Text, StyleSheet, ScrollView, Pressable, TextInput, Platform,
+  ActivityIndicator, FlatList, Modal,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,31 @@ const TIME_SLOTS = [
   "11:00", "11:30", "12:00", "13:30", "14:00", "14:30",
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
 ];
+
+const DAYS_FR = ["L", "M", "M", "J", "V", "S", "D"];
+const MONTHS_FR = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+
+function buildCalendarDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: Array<{ day: number | null; dateKey: string | null }> = [];
+  for (let i = 0; i < offset; i++) days.push({ day: null, dateKey: null });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    days.push({ day: d, dateKey });
+  }
+  return days;
+}
+
+function formatDateFR(dateKey: string): string {
+  if (!dateKey) return "";
+  const [y, m, d] = dateKey.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 export default function ReservationFormScreen() {
   const params = useLocalSearchParams();
@@ -50,13 +76,28 @@ export default function ReservationFormScreen() {
   const [vehicleModel, setVehicleModel] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calMonth, setCalMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
   const { data: clients = [] } = useQuery({ queryKey: ["admin-clients"], queryFn: adminClients.getAll });
   const { data: services = [] } = useQuery({ queryKey: ["admin-services"], queryFn: adminServices.getAll });
   const { data: existing, isLoading: loadingExisting, error: loadingError } = useQuery({
     queryKey: ["admin-reservation", id],
-    queryFn: () => adminReservations.getById(id),
+    queryFn: async () => {
+      try {
+        return await adminReservations.getById(id);
+      } catch {
+        const list = queryClient.getQueryData<any[]>(["admin-reservations"]) || [];
+        const found = list.find((r: any) => r.id === id);
+        if (found) return found;
+        throw new Error("Rendez-vous introuvable");
+      }
+    },
     enabled: isEdit,
-    retry: 1,
+    retry: 0,
   });
 
   useEffect(() => {
@@ -65,7 +106,9 @@ export default function ReservationFormScreen() {
       setStatus(existing.status || "pending");
       if (existing.scheduledDate) {
         const d = new Date(existing.scheduledDate);
-        setScheduledDate(d.toISOString().split("T")[0]);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        setScheduledDate(key);
+        setCalMonth(new Date(d.getFullYear(), d.getMonth(), 1));
         const h = d.getHours().toString().padStart(2, "0");
         const m = d.getMinutes().toString().padStart(2, "0");
         setScheduledTime(`${h}:${m}`);
@@ -79,13 +122,21 @@ export default function ReservationFormScreen() {
     }
   }, [existing]);
 
+  const calYear = calMonth.getFullYear();
+  const calMonthIdx = calMonth.getMonth();
+  const calDays = useMemo(() => buildCalendarDays(calYear, calMonthIdx), [calYear, calMonthIdx]);
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+
   const handleSave = async () => {
     if (!clientId) {
       showAlert({ type: "error", title: "Erreur", message: "Veuillez sélectionner un client.", buttons: [{ text: "OK", style: "primary" }] });
       return;
     }
     if (!scheduledDate) {
-      showAlert({ type: "error", title: "Erreur", message: "Veuillez indiquer une date.", buttons: [{ text: "OK", style: "primary" }] });
+      showAlert({ type: "error", title: "Erreur", message: "Veuillez sélectionner une date.", buttons: [{ text: "OK", style: "primary" }] });
       return;
     }
     setSaving(true);
@@ -124,7 +175,6 @@ export default function ReservationFormScreen() {
   const clientsArr = Array.isArray(clients) ? clients : [];
   const servicesArr = Array.isArray(services) ? services : [];
   const selectedClient = clientsArr.find((c: any) => String(c.id) === clientId);
-  const selectedService = servicesArr.find((s: any) => String(s.id) === serviceId);
   const filteredClients = clientSearch
     ? clientsArr.filter((c: any) => {
         const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
@@ -226,6 +276,77 @@ export default function ReservationFormScreen() {
         </View>
       </Modal>
 
+      <Modal visible={showDatePicker} animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
+        <View style={[styles.container, { paddingTop: topPad }]}>
+          <View style={styles.modalHeader}>
+            <Pressable style={styles.backBtn} onPress={() => setShowDatePicker(false)}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Choisir une date</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomPad }}>
+            <View style={styles.calHeader}>
+              <Pressable onPress={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} style={styles.calNavBtn}>
+                <Ionicons name="chevron-back" size={22} color={theme.text} />
+              </Pressable>
+              <Text style={styles.calMonthLabel}>{MONTHS_FR[calMonthIdx]} {calYear}</Text>
+              <Pressable onPress={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} style={styles.calNavBtn}>
+                <Ionicons name="chevron-forward" size={22} color={theme.text} />
+              </Pressable>
+            </View>
+            <View style={styles.calDaysHeader}>
+              {DAYS_FR.map((d, i) => (
+                <Text key={i} style={styles.calDayLabel}>{d}</Text>
+              ))}
+            </View>
+            <View style={styles.calGrid}>
+              {calDays.map((cell, i) => {
+                if (!cell.day || !cell.dateKey) {
+                  return <View key={i} style={styles.calCell} />;
+                }
+                const isSelected = scheduledDate === cell.dateKey;
+                const isToday = cell.dateKey === today;
+                const isPast = cell.dateKey < today;
+                return (
+                  <Pressable
+                    key={i}
+                    style={[
+                      styles.calCell,
+                      isSelected && { backgroundColor: theme.primary, borderRadius: 10 },
+                      isToday && !isSelected && { borderWidth: 1, borderColor: theme.primary, borderRadius: 10 },
+                      isPast && { opacity: 0.4 },
+                    ]}
+                    onPress={() => {
+                      setScheduledDate(cell.dateKey!);
+                      Haptics.selectionAsync();
+                      setTimeout(() => setShowDatePicker(false), 150);
+                    }}
+                  >
+                    <Text style={[styles.calCellText, isSelected && { color: "#fff", fontFamily: "Inter_700Bold" }, isToday && !isSelected && { color: theme.primary }]}>
+                      {cell.day}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {scheduledDate ? (
+              <View style={{ marginTop: 20, alignItems: "center" }}>
+                <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: theme.text }}>
+                  Sélectionné : {formatDateFR(scheduledDate)}
+                </Text>
+                <Pressable
+                  style={{ marginTop: 16, backgroundColor: theme.primary, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 12 }}
+                  onPress={() => setShowDatePicker(false)}
+                >
+                  <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Confirmer</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </ScrollView>
+        </View>
+      </Modal>
+
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>Client *</Text>
         <Pressable
@@ -256,8 +377,19 @@ export default function ReservationFormScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Date (AAAA-MM-JJ)</Text>
-        <TextInput style={styles.input} value={scheduledDate} onChangeText={setScheduledDate} placeholder="2026-04-15" placeholderTextColor={theme.textTertiary} />
+        <Text style={styles.label}>Date *</Text>
+        <Pressable
+          style={[styles.selectorBtn, scheduledDate && { borderColor: theme.primary }]}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <View style={styles.selectorContent}>
+            <Ionicons name="calendar-outline" size={20} color={scheduledDate ? theme.primary : theme.textTertiary} />
+            <Text style={[styles.selectorText, !scheduledDate && { color: theme.textTertiary }]}>
+              {scheduledDate ? formatDateFR(scheduledDate) : "Sélectionner une date..."}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+        </Pressable>
 
         <Text style={styles.label}>Créneau horaire</Text>
         <View style={styles.chipRow}>
@@ -340,4 +472,12 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
   clientEmail: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textTertiary, marginTop: 2 },
   saveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: theme.primary, borderRadius: 14, height: 52, marginTop: 20 },
   saveBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  calHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  calNavBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, justifyContent: "center", alignItems: "center" },
+  calMonthLabel: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: theme.text },
+  calDaysHeader: { flexDirection: "row", marginBottom: 4 },
+  calDayLabel: { flex: 1, textAlign: "center", fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.textTertiary, paddingVertical: 6 },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: { width: "14.285%", aspectRatio: 1, justifyContent: "center", alignItems: "center" },
+  calCellText: { fontSize: 15, fontFamily: "Inter_500Medium", color: theme.text },
 });
