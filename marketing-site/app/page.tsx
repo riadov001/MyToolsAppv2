@@ -3,6 +3,7 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
+import FuturisticFeatures from "@/components/FuturisticFeatures";
 import HowItWorks from "@/components/HowItWorks";
 import Screenshots from "@/components/Screenshots";
 import ContactForm from "@/components/ContactForm";
@@ -16,6 +17,7 @@ export default function HomePage() {
       <Navbar />
       <Hero />
       <Features />
+      <FuturisticFeatures />
       <HowItWorks />
       <Screenshots />
       <ContactForm />
