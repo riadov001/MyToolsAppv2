@@ -24,7 +24,7 @@
 
 html,
 body {
-  max-width: 100vw;
+  width: 100%;
   overflow-x: hidden;
   background-color: #0A0A0A;
   color: #F0F0F0;
@@ -40,6 +40,10 @@ a {
 
 .font-michroma {
   font-family: 'Michroma', sans-serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
 }
 
 /* Grid background pattern */
@@ -79,4 +83,39 @@ a {
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: 1.875rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  h1 {
+    font-size: 2.25rem;
+  }
+  
+  h2 {
+    font-size: 1.875rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  h1 {
+    font-size: 3rem;
+  }
+  
+  h2 {
+    font-size: 2.25rem;
+  }
 }

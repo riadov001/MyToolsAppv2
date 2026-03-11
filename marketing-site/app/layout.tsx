@@ -2,41 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MyTools Admin — Gestion de garage simplifiée",
+  title: "MyTools Admin — Gestion de garage simplifée",
   description:
-    "MyTools Admin est l'application mobile exclusive pour les administrateurs de garages partenaires MyTools Group. Gérez vos devis, factures, réservations et clients en temps réel.",
+    "L'application mobile pour gérer votre garage en temps réel. Devis, factures, réservations, clients. Accès exclusive aux garages partenaires MyTools.",
   keywords:
-    "garage, gestion, devis, factures, réservations, clients, mytools, admin, automobile, atelier",
+    "garage, gestion, devis, factures, réservations, clients, mytools, admin, automobile",
   authors: [{ name: "MyTools Group", url: "https://www.mytoolsgroup.eu" }],
   creator: "MyTools Group",
   metadataBase: new URL("https://www.mytoolsgroup.eu"),
   openGraph: {
-    title: "MyTools Admin — Gestion de garage simplifiée",
-    description:
-      "L'application mobile pour les administrateurs de garages partenaires MyTools. Devis, factures, clients et réservations en temps réel.",
+    title: "MyTools Admin",
+    description: "L'application mobile pour gérer votre garage en temps réel.",
     url: "https://www.mytoolsgroup.eu",
     siteName: "MyTools Admin",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "MyTools Admin — Built for Performance",
-      },
-    ],
     locale: "fr_FR",
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "MyTools Admin — Gestion de garage simplifiée",
-    description:
-      "L'application mobile pour les administrateurs de garages partenaires MyTools.",
-    images: ["/og-image.png"],
-  },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
   },
   robots: {
     index: true,

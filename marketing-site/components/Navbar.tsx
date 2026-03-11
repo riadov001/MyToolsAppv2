@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,26 +21,26 @@ export default function Navbar() {
       transition={{ duration: 0.5 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-dark-base/90 backdrop-blur-xl border-b border-dark-border"
+          ? "bg-dark-base/95 backdrop-blur-xl border-b border-dark-border"
           : "bg-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-red rounded-lg flex items-center justify-center">
+        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <div className="w-8 h-8 bg-brand-red rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="font-michroma text-white text-xs font-bold">MT</span>
           </div>
-          <span className="font-michroma text-text-primary text-sm tracking-widest uppercase">
+          <span className="font-michroma text-text-primary text-sm tracking-widest uppercase hidden sm:inline">
             MyTools
           </span>
-        </a>
+        </Link>
 
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-text-secondary hover:text-text-primary text-sm font-medium transition-colors"
+              className="font-inter text-text-secondary hover:text-text-primary text-sm font-medium transition-colors"
             >
               {link.label}
             </a>
@@ -49,9 +50,9 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-4">
           <a
             href="mailto:contact@mytoolsgroup.eu?subject=Demande accès MyTools Admin"
-            className="text-sm font-semibold text-white bg-brand-red hover:bg-brand-red-dark px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-semibold text-white bg-brand-red hover:bg-brand-red-dark px-4 py-2 rounded-lg transition-colors font-inter"
           >
-            Demander l'accès
+            Accès
           </a>
         </div>
 
@@ -61,9 +62,9 @@ export default function Navbar() {
           aria-label="Menu"
         >
           <div className="w-5 flex flex-col gap-1.5">
-            <span className={`block h-0.5 bg-current transition-all ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
-            <span className={`block h-0.5 bg-current transition-all ${menuOpen ? "opacity-0" : ""}`} />
-            <span className={`block h-0.5 bg-current transition-all ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-current transition-all ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-current transition-all ${menuOpen ? "opacity-0" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-current transition-all ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
           </div>
         </button>
       </div>
@@ -81,7 +82,7 @@ export default function Navbar() {
                 <a
                   key={link.href}
                   href={link.href}
-                  className="text-text-secondary hover:text-text-primary text-sm font-medium transition-colors"
+                  className="font-inter text-text-secondary hover:text-text-primary text-sm font-medium transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
@@ -89,7 +90,7 @@ export default function Navbar() {
               ))}
               <a
                 href="mailto:contact@mytoolsgroup.eu?subject=Demande accès MyTools Admin"
-                className="text-sm font-semibold text-white bg-brand-red px-4 py-2 rounded-lg text-center mt-2"
+                className="text-sm font-semibold text-white bg-brand-red px-4 py-2 rounded-lg text-center font-inter"
               >
                 Demander l'accès
               </a>
