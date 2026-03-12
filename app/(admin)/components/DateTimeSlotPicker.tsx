@@ -50,10 +50,11 @@ interface DateTimeSlotPickerProps {
   onSelect: (dateKey: string, timeSlot: string) => void;
   selectedDate?: string;
   selectedTime?: string;
+  allowPast?: boolean;
 }
 
 export function DateTimeSlotPickerButton({
-  onSelect, selectedDate, selectedTime,
+  onSelect, selectedDate, selectedTime, allowPast = false,
 }: DateTimeSlotPickerProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -157,6 +158,7 @@ export function DateTimeSlotPickerButton({
                 const isSelected = localDate === cell.dateKey;
                 const isToday = cell.dateKey === today;
                 const isPast = cell.dateKey < today;
+                const disabled = isPast && !allowPast;
 
                 return (
                   <Pressable
@@ -165,10 +167,10 @@ export function DateTimeSlotPickerButton({
                       styles.calCell,
                       isSelected && { backgroundColor: theme.primary, borderRadius: 10 },
                       isToday && !isSelected && { borderWidth: 1.5, borderColor: theme.primary, borderRadius: 10 },
-                      isPast && { opacity: 0.35 },
+                      disabled && { opacity: 0.35 },
                     ]}
-                    onPress={() => !isPast && handleDayPress(cell.dateKey!)}
-                    disabled={isPast}
+                    onPress={() => !disabled && handleDayPress(cell.dateKey!)}
+                    disabled={disabled}
                   >
                     <Text style={[
                       styles.calCellText,

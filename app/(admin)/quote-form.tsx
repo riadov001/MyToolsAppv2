@@ -82,14 +82,15 @@ export default function QuoteFormScreen() {
       if (Array.isArray(existingMedia) && existingMedia.length > 0) {
         setMediaUris(existingMedia);
       }
-      if (existing.items?.length) {
+      const rawItems = existing.items || existing.lines || existing.lineItems || existing.quote_items || [];
+      if (rawItems.length) {
         setItems(
-          existing.items.map((it: any) => ({
+          rawItems.map((it: any) => ({
             key: genKey(),
             description: it.description || "",
             quantity: String(it.quantity || 1),
-            unitPriceExcludingTax: String(it.unitPriceExcludingTax || it.unitPrice || ""),
-            taxRate: String(it.taxRate || 20),
+            unitPriceExcludingTax: String(it.unitPriceExcludingTax || it.unitPrice || it.unit_price || ""),
+            taxRate: String(it.taxRate || it.tvaRate || 20),
           }))
         );
       } else if (existing.priceExcludingTax || existing.serviceId) {
@@ -149,7 +150,7 @@ export default function QuoteFormScreen() {
       if (it.key !== servicePickerItemKey) return it;
       return {
         ...it,
-        description: svc.name || it.description,
+        description: svc.description || svc.name || it.description,
         unitPriceExcludingTax: svc.basePrice != null ? String(parseFloat(svc.basePrice)) : it.unitPriceExcludingTax,
       };
     }));

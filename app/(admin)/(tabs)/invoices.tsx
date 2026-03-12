@@ -14,6 +14,19 @@ import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
 
+function resolveClientName(item: any): string {
+  const c = item.client;
+  if (c?.firstName || c?.lastName) return `${c.firstName || ""} ${c.lastName || ""}`.trim();
+  if (c?.name) return c.name;
+  if (item.clientFirstName || item.clientLastName) return `${item.clientFirstName || ""} ${item.clientLastName || ""}`.trim();
+  if (item.client_first_name || item.client_last_name) return `${item.client_first_name || ""} ${item.client_last_name || ""}`.trim();
+  if (item.clientName) return item.clientName;
+  if (c?.email) return c.email;
+  if (item.clientEmail) return item.clientEmail;
+  if (item.clientId) return `Client #${item.clientId}`;
+  return "Client";
+}
+
 const STATUSES = ["all", "pending", "paid", "cancelled"] as const;
 const STATUS_LABELS: Record<string, string> = { all: "Tous", pending: "En attente", paid: "Payée", cancelled: "Annulée", overdue: "En retard" };
 const STATUS_COLORS: Record<string, string> = { pending: "#F59E0B", paid: "#22C55E", cancelled: "#EF4444", overdue: "#EF4444" };
@@ -62,7 +75,7 @@ export default function AdminInvoicesScreen() {
     if (filter !== "all" && inv.status?.toLowerCase() !== filter) return false;
     if (search) {
       const s = search.toLowerCase();
-      const name = `${inv.client?.firstName || ""} ${inv.client?.lastName || ""}`.toLowerCase();
+      const name = resolveClientName(inv).toLowerCase();
       return name.includes(s) || (inv.invoiceNumber || "").toLowerCase().includes(s);
     }
     return true;
@@ -72,7 +85,7 @@ export default function AdminInvoicesScreen() {
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const color = STATUS_COLORS[item.status?.toLowerCase()] || theme.textTertiary;
-    const clientName = `${item.client?.firstName || ""} ${item.client?.lastName || ""}`.trim() || "Client";
+    const clientName = resolveClientName(item);
     return (
       <Pressable
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}

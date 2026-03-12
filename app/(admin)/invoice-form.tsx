@@ -65,14 +65,15 @@ export default function InvoiceFormScreen() {
       setStatus(existing.status || "pending");
       setPaymentMethod(existing.paymentMethod || "");
       setNotes(existing.notes || "");
-      if (existing.items?.length) {
+      const rawItems = existing.items || existing.lines || existing.lineItems || existing.invoice_lines || [];
+      if (rawItems.length) {
         setItems(
-          existing.items.map((it: any) => ({
+          rawItems.map((it: any) => ({
             key: genKey(),
             description: it.description || "",
             quantity: String(it.quantity || 1),
-            unitPriceExcludingTax: String(it.unitPriceExcludingTax || ""),
-            taxRate: String(it.taxRate || 20),
+            unitPriceExcludingTax: String(it.unitPriceExcludingTax || it.unitPrice || it.unit_price || ""),
+            taxRate: String(it.taxRate || it.tvaRate || 20),
           }))
         );
       }
@@ -124,7 +125,7 @@ export default function InvoiceFormScreen() {
       if (it.key !== servicePickerItemKey) return it;
       return {
         ...it,
-        description: svc.name || it.description,
+        description: svc.description || svc.name || it.description,
         unitPriceExcludingTax: svc.basePrice != null ? String(parseFloat(svc.basePrice)) : it.unitPriceExcludingTax,
       };
     }));

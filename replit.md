@@ -41,8 +41,10 @@ Base URL: Configurable via `EXTERNAL_API_URL` env var (default: `https://apps.my
 - `GET/POST/PATCH/DELETE /api/mobile/admin/reservations` - Reservations CRUD
 - `PATCH /api/mobile/admin/reservations/:id/status` - Reservation status change
 - `GET/POST/PATCH/DELETE /api/mobile/admin/clients` - Clients CRUD
+- `GET /api/admin/logs` - Server logs (circular buffer, 200 entries, optional `?since=` filter)
 
 ### Roles utilisateur
+- `root_admin` / `root` - Root admin (all admin features + server logs)
 - `admin` - Full access (admin interface, all CRUD + delete)
 - `employe` - Admin interface, no delete permissions
 - `client` - Particulier (client interface)
@@ -97,6 +99,7 @@ app/
     quote-form.tsx      # Formulaire créer/modifier devis
     invoice-form.tsx    # Formulaire créer/modifier facture (lignes dynamiques)
     reservation-form.tsx # Formulaire créer/modifier RDV (créneaux horaires)
+    logs.tsx            # Logs serveur en temps réel (root_admin/root uniquement)
     client-form.tsx     # Formulaire créer/modifier client
   support.tsx           # Formulaire de support
   legal.tsx             # Mentions légales

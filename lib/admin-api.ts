@@ -326,6 +326,13 @@ export const adminProfile = {
   update: (data: any) => adminApiCall<any>("/api/mobile/admin/settings", { method: "PATCH", body: data }),
 };
 
+export const adminLogs = {
+  get: (since?: string) => {
+    const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+    return adminApiCall<{ logs: any[]; total: number }>(`/api/admin/logs${qs}`);
+  },
+};
+
 export const adminNotifications = {
   getAll: () => adminApiCall<any[]>("/api/notifications"),
   getUnreadCount: () => adminApiCall<{ count: number }>("/api/notifications/unread-count"),

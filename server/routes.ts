@@ -108,6 +108,36 @@ function forwardSetCookie(externalRes: globalThis.Response, expressRes: Response
   }
 }
 
+const LOG_BUFFER_SIZE = 200;
+const logBuffer: Array<{ timestamp: string; level: string; message: string; source: string }> = [];
+
+function pushLog(level: string, message: string, source = "server") {
+  logBuffer.push({ timestamp: new Date().toISOString(), level, message, source });
+  if (logBuffer.length > LOG_BUFFER_SIZE) logBuffer.shift();
+}
+
+const origConsoleLog = console.log;
+const origConsoleWarn = console.warn;
+const origConsoleError = console.error;
+
+function safeStringify(a: any): string {
+  if (typeof a === "string") return a;
+  try { return JSON.stringify(a); } catch { return String(a); }
+}
+
+console.log = (...args: any[]) => {
+  origConsoleLog(...args);
+  pushLog("info", args.map(safeStringify).join(" "));
+};
+console.warn = (...args: any[]) => {
+  origConsoleWarn(...args);
+  pushLog("warn", args.map(safeStringify).join(" "));
+};
+console.error = (...args: any[]) => {
+  origConsoleError(...args);
+  pushLog("error", args.map(safeStringify).join(" "));
+};
+
 const APP_REVIEW_MODE = process.env.APP_REVIEW_MODE === "true";
 
 const REVIEWER_EMAIL = "review@testapp.com";
@@ -197,6 +227,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json(REVIEWER_USER);
     }
     next();
+  });
+
+  app.get("/api/admin/logs", async (req: Request, res: Response) => {
+    const auth = req.headers["authorization"] || "";
+    if (!auth) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    try {
+      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/mobile/auth/me`, {
+        headers: { "authorization": auth, "accept": "application/json" },
+      });
+      if (!meRes.ok) return res.status(401).json({ message: "Token invalide" });
+      const user: any = await meRes.json();
+      const role = (user?.role || "").toLowerCase();
+      if (role !== "root_admin" && role !== "root") {
+        return res.status(403).json({ message: "Accès réservé aux root admins" });
+      }
+    } catch {
+      return res.status(500).json({ message: "Erreur de vérification" });
+    }
+    const since = req.query.since as string | undefined;
+    let entries = logBuffer;
+    if (since) {
+      entries = logBuffer.filter(e => e.timestamp > since);
+    }
+    res.json({ logs: entries, total: logBuffer.length });
   });
 
   app.get("/api/public/garages", async (req: Request, res: Response) => {

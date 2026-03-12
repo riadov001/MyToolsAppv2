@@ -72,11 +72,13 @@ export default function ReservationFormScreen() {
       setStatus(existing.status || "pending");
       if (existing.scheduledDate) {
         const d = new Date(existing.scheduledDate);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        setScheduledDate(key);
-        const h = d.getHours().toString().padStart(2, "0");
-        const m = d.getMinutes().toString().padStart(2, "0");
-        setScheduledTime(`${h}:${m}`);
+        if (!isNaN(d.getTime())) {
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          setScheduledDate(key);
+          const h = d.getHours().toString().padStart(2, "0");
+          const m = d.getMinutes().toString().padStart(2, "0");
+          setScheduledTime(`${h}:${m}`);
+        }
       }
       setNotes(existing.notes || "");
       setVehiclePlate(existing.vehicleInfo?.plate || existing.vehicleRegistration || "");
@@ -280,6 +282,7 @@ export default function ReservationFormScreen() {
         <DateTimeSlotPickerButton
           selectedDate={scheduledDate}
           selectedTime={scheduledTime}
+          allowPast={isEdit}
           onSelect={(date, time) => {
             setScheduledDate(date);
             setScheduledTime(time);

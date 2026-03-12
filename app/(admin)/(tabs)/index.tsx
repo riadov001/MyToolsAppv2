@@ -35,6 +35,9 @@ export default function AdminDashboard() {
     router.replace("/(auth)/login");
   };
 
+  const userRole = (user?.role || "").toLowerCase();
+  const isRootAdmin = userRole === "root_admin" || userRole === "root";
+
   const handleDeleteAccount = () => {
     showAlert({
       type: "warning",
@@ -103,6 +106,11 @@ export default function AdminDashboard() {
             <Text style={styles.greeting}>Bonjour,</Text>
             <Text style={styles.userName}>{user?.firstName || "Admin"}</Text>
           </View>
+          {isRootAdmin && (
+            <Pressable style={[styles.headerBtn, { backgroundColor: theme.primary + "10" }]} onPress={() => router.push("/(admin)/logs" as any)} accessibilityLabel="Logs serveur">
+              <Ionicons name="terminal-outline" size={20} color={theme.primary} />
+            </Pressable>
+          )}
           <Pressable style={styles.headerBtn} onPress={handleDeleteAccount} accessibilityLabel="Supprimer le compte">
             <Ionicons name="trash-outline" size={20} color="#EF4444" />
           </Pressable>
