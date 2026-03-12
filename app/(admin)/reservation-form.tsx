@@ -12,6 +12,7 @@ import { adminReservations, adminClients, adminServices } from "@/lib/admin-api"
 import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
+import { DateTimeSlotPickerButton } from "./components/DateTimeSlotPicker";
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "En attente", color: "#F59E0B" },
@@ -20,17 +21,6 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Terminé", color: "#3B82F6" },
 ];
 
-const TIME_SLOTS = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "13:30", "14:00", "14:30",
-  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-];
-
-const DAYS_FR = ["L", "M", "M", "J", "V", "S", "D"];
-const MONTHS_FR = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
 
 function buildCalendarDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -76,12 +66,6 @@ export default function ReservationFormScreen() {
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [calMonth, setCalMonth] = useState<Date>(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
 
   const { data: clients = [] } = useQuery({ queryKey: ["admin-clients"], queryFn: adminClients.getAll });
   const { data: services = [] } = useQuery({ queryKey: ["admin-services"], queryFn: adminServices.getAll });
@@ -290,77 +274,6 @@ export default function ReservationFormScreen() {
         </View>
       </Modal>
 
-      <Modal visible={showDatePicker} animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
-        <View style={[styles.container, { paddingTop: topPad }]}>
-          <View style={styles.modalHeader}>
-            <Pressable style={styles.backBtn} onPress={() => setShowDatePicker(false)}>
-              <Ionicons name="close" size={24} color={theme.text} />
-            </Pressable>
-            <Text style={styles.headerTitle}>Choisir une date</Text>
-            <View style={{ width: 44 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomPad }}>
-            <View style={styles.calHeader}>
-              <Pressable onPress={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} style={styles.calNavBtn}>
-                <Ionicons name="chevron-back" size={22} color={theme.text} />
-              </Pressable>
-              <Text style={styles.calMonthLabel}>{MONTHS_FR[calMonthIdx]} {calYear}</Text>
-              <Pressable onPress={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} style={styles.calNavBtn}>
-                <Ionicons name="chevron-forward" size={22} color={theme.text} />
-              </Pressable>
-            </View>
-            <View style={styles.calDaysHeader}>
-              {DAYS_FR.map((d, i) => (
-                <Text key={i} style={styles.calDayLabel}>{d}</Text>
-              ))}
-            </View>
-            <View style={styles.calGrid}>
-              {calDays.map((cell, i) => {
-                if (!cell.day || !cell.dateKey) {
-                  return <View key={i} style={styles.calCell} />;
-                }
-                const isSelected = scheduledDate === cell.dateKey;
-                const isToday = cell.dateKey === today;
-                const isPast = cell.dateKey < today;
-                return (
-                  <Pressable
-                    key={i}
-                    style={[
-                      styles.calCell,
-                      isSelected && { backgroundColor: theme.primary, borderRadius: 10 },
-                      isToday && !isSelected && { borderWidth: 1, borderColor: theme.primary, borderRadius: 10 },
-                      isPast && { opacity: 0.4 },
-                    ]}
-                    onPress={() => {
-                      setScheduledDate(cell.dateKey!);
-                      Haptics.selectionAsync();
-                      setTimeout(() => setShowDatePicker(false), 150);
-                    }}
-                  >
-                    <Text style={[styles.calCellText, isSelected && { color: "#fff", fontFamily: "Inter_700Bold" }, isToday && !isSelected && { color: theme.primary }]}>
-                      {cell.day}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {scheduledDate ? (
-              <View style={{ marginTop: 20, alignItems: "center" }}>
-                <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: theme.text }}>
-                  Sélectionné : {formatDateFR(scheduledDate)}
-                </Text>
-                <Pressable
-                  style={{ marginTop: 16, backgroundColor: theme.primary, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 12 }}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 }}>Confirmer</Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </ScrollView>
-        </View>
-      </Modal>
-
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>Client *</Text>
         <Pressable
@@ -392,27 +305,14 @@ export default function ReservationFormScreen() {
         </View>
 
         <Text style={styles.label}>Date *</Text>
-        <Pressable
-          style={[styles.selectorBtn, scheduledDate && { borderColor: theme.primary }]}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <View style={styles.selectorContent}>
-            <Ionicons name="calendar-outline" size={20} color={scheduledDate ? theme.primary : theme.textTertiary} />
-            <Text style={[styles.selectorText, !scheduledDate && { color: theme.textTertiary }]}>
-              {scheduledDate ? formatDateFR(scheduledDate) : "Sélectionner une date..."}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-        </Pressable>
-
-        <Text style={styles.label}>Créneau horaire</Text>
-        <View style={styles.chipRow}>
-          {TIME_SLOTS.map(t => (
-            <Pressable key={t} style={[styles.chip, scheduledTime === t && { backgroundColor: theme.primary, borderColor: theme.primary }]} onPress={() => setScheduledTime(t)}>
-              <Text style={[styles.chipText, scheduledTime === t && { color: "#fff" }]}>{t}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <DateTimeSlotPickerButton
+          selectedDate={scheduledDate}
+          selectedTime={scheduledTime}
+          onSelect={(date, time) => {
+            setScheduledDate(date);
+            setScheduledTime(time);
+          }}
+        />
 
         {servicesArr.length > 0 && (
           <>
