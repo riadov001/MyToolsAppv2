@@ -79,7 +79,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "notifications",
     icon: "notifications-outline",
-    iconColor: "#EF4444",
+    iconColor: "#F59E0B",
     title: "Notifications",
     items: [
       "Recevez une alerte à chaque nouveau devis, facture ou rendez-vous.",
