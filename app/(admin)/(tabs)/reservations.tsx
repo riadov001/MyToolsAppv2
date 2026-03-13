@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
+import { syncReservationsToCalendar } from "@/lib/calendar";
 
 function resolveClient(item: any, clientMap: Record<string, any>): { name: string; email: string; phone: string } {
   const c = item.client || (item.clientId && clientMap[String(item.clientId)]) || null;
@@ -110,6 +111,35 @@ export default function AdminReservationsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
   });
+
+  const handleCalendarSync = async () => {
+    try {
+      const result = await syncReservationsToCalendar(arr);
+      if (result.success) {
+        showAlert({
+          type: "success",
+          title: "Synchronisation réussie",
+          message: result.message,
+          buttons: [{ text: "OK", style: "primary" }],
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        showAlert({
+          type: "error",
+          title: "Erreur de synchronisation",
+          message: result.message,
+          buttons: [{ text: "OK", style: "primary" }],
+        });
+      }
+    } catch (err: any) {
+      showAlert({
+        type: "error",
+        title: "Erreur",
+        message: err.message || "Synchronisation échouée",
+        buttons: [{ text: "OK", style: "primary" }],
+      });
+    }
+  };
 
   const confirmDelete = (id: string, name: string) => {
     showAlert({
@@ -255,7 +285,11 @@ export default function AdminReservationsScreen() {
       <View style={[styles.header, { paddingTop: topPad }]}>
         <Image source={require("@/assets/images/logo_new.png")} style={styles.headerLogo} contentFit="contain" />
         <Text style={styles.screenTitle}>Rendez-vous</Text>
-        <View style={{ width: 44 }} />
+        {Platform.OS !== "web" && (
+          <Pressable style={styles.headerBtn} onPress={handleCalendarSync} accessibilityLabel="Synchroniser l'agenda">
+            <Ionicons name="calendar" size={22} color={theme.primary} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.modeToggle}>
@@ -394,6 +428,7 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 10 },
   headerLogo: { width: 34, height: 34, borderRadius: 8 },
   screenTitle: { flex: 1, fontSize: 22, fontFamily: "Michroma_400Regular", color: theme.text, letterSpacing: 0.5 },
+  headerBtn: { width: 44, height: 44, justifyContent: "center", alignItems: "center" },
   addBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.primary, justifyContent: "center", alignItems: "center" },
   modeToggle: { flexDirection: "row", marginHorizontal: 16, marginBottom: 10, backgroundColor: theme.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.border, padding: 3, gap: 3 },
   modeBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8, borderRadius: 10 },
