@@ -123,8 +123,8 @@ export default function ConsentScreen() {
             <CheckRow
               checked={acceptedNotifications}
               onToggle={() => setAcceptedNotifications(v => !v)}
-              label="Notifications (optionnel)"
-              sub="J'accepte de recevoir des notifications push pour les mises à jour de devis, factures et rendez-vous"
+              label="Notifications"
+              sub="J'accepte de recevoir des notifications push pour les mises à jour de devis, factures et rendez-vous (optionnel)"
             />
           </View>
         </View>
