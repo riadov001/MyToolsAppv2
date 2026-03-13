@@ -29,10 +29,15 @@ export default function ConsentScreen() {
 
     if (acceptedNotifications && Platform.OS === "ios") {
       try {
-        await Notifications.requestPermissionsAsync({
+        const { status } = await Notifications.requestPermissionsAsync({
           ios: { allowAlert: true, allowBadge: true, allowSound: true },
         });
-      } catch {}
+        if (status !== "granted") {
+          await AsyncStorage.setItem("consent_notifications", "false");
+        }
+      } catch {
+        await AsyncStorage.setItem("consent_notifications", "false");
+      }
     }
 
     router.replace("/");
