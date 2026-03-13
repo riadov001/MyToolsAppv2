@@ -212,9 +212,14 @@ export default function LoginScreen() {
           <View style={styles.accessInfoBox}>
             <Ionicons name="lock-closed-outline" size={14} color="#666" />
             <Text style={styles.accessInfoText}>
-              Cette application est destinée aux garages professionnels utilisant déjà la plateforme MyTools. Les comptes sont créés uniquement via la plateforme web sur mytoolsgroup.eu.
+              Cette application est réservée aux administrateurs de garage partenaires MyTools.
             </Text>
           </View>
+
+          <Pressable onPress={() => router.push("/support" as any)} style={styles.supportLink}>
+            <Ionicons name="help-circle-outline" size={14} color={theme.primary} />
+            <Text style={styles.supportLinkText}>Besoin d'aide ? Contacter le support</Text>
+          </Pressable>
 
           <View style={styles.legalRow}>
             <Pressable onPress={() => router.push("/privacy" as any)}>
@@ -407,6 +412,19 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
     color: theme.primary,
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  supportLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  supportLinkText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: theme.primary,
   },
   versionContainer: {
     alignItems: "center",
