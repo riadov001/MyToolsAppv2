@@ -216,11 +216,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          <Pressable onPress={() => router.push("/support" as any)} style={styles.supportLink}>
-            <Ionicons name="help-circle-outline" size={14} color={theme.primary} />
-            <Text style={styles.supportLinkText}>Besoin d'aide ? Contacter le support</Text>
-          </Pressable>
-
           <View style={styles.legalRow}>
             <Pressable onPress={() => router.push("/privacy" as any)}>
               <Text style={styles.legalLink}>Politique de confidentialité</Text>
@@ -230,6 +225,11 @@ export default function LoginScreen() {
               <Text style={styles.legalLink}>Mentions légales</Text>
             </Pressable>
           </View>
+
+          <Pressable onPress={() => router.push("/support" as any)} style={styles.supportLink}>
+            <Ionicons name="help-circle-outline" size={14} color={theme.textSecondary} />
+            <Text style={styles.supportLinkText}>Besoin d'aide ? Contacter le support</Text>
+          </Pressable>
 
           <View style={styles.versionContainer}>
             <Text style={styles.versionText}>v1.0</Text>
@@ -418,13 +418,15 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: 12,
+    marginTop: 10,
     paddingVertical: 8,
+    opacity: 0.5,
   },
   supportLinkText: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: theme.primary,
+    fontFamily: "Inter_400Regular",
+    color: theme.textSecondary,
+    textDecorationLine: "underline",
   },
   versionContainer: {
     alignItems: "center",
