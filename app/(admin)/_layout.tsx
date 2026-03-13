@@ -23,6 +23,8 @@ export default function AdminLayout() {
       <Stack.Screen name="invoice-detail" options={{ presentation: "modal", headerShown: false }} />
       <Stack.Screen name="reservation-detail" options={{ presentation: "modal", headerShown: false }} />
       <Stack.Screen name="client-form" options={{ presentation: "modal", headerShown: false }} />
+      <Stack.Screen name="guide" options={{ presentation: "modal", headerShown: false }} />
+      <Stack.Screen name="support-history" options={{ presentation: "modal", headerShown: false }} />
     </Stack>
   );
 }

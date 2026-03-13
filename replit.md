@@ -51,7 +51,7 @@ Base URL: Configurable via `EXTERNAL_API_URL` env var (default: `https://apps.my
 - `client_professionnel` - Professionnel (client interface)
 
 ## Suppression de compte
-- Bouton rouge "corbeille" dans le header du dashboard → ouvre une page de confirmation
+- Accessible depuis l'onglet Paramètres > "Supprimer mon compte" → ouvre une page de confirmation
 - Écran `app/(admin)/delete-account.tsx` : 2 étapes de confirmation
 - API endpoint: `DELETE /api/users/me`
 - Après suppression: déconnexion et redirection vers la connexion
@@ -88,14 +88,17 @@ app/
     support-history.tsx # Historique des demandes support
     delete-account.tsx  # Suppression permanente du compte (Apple 5.1.1(v))
   (admin)/              # Interface admin (admin/employe)
-    _layout.tsx         # Stack admin
+    _layout.tsx         # Stack admin (includes guide + support-history modals)
     (tabs)/
-      _layout.tsx       # Tab navigation admin (5 tabs)
+      _layout.tsx       # Tab navigation admin (6 tabs)
       index.tsx         # Dashboard KPIs + chart + activité récente
       quotes.tsx        # Liste devis avec recherche/filtres/CRUD
       invoices.tsx      # Liste factures avec recherche/filtres/CRUD
       reservations.tsx  # Liste RDV avec recherche/filtres/CRUD
       clients.tsx       # Liste clients avec recherche
+      settings.tsx      # Paramètres: profil, notifications, support, légal, guide, déconnexion, suppression compte
+    guide.tsx           # Guide admin: fonctionnalités en accordéon (dashboard, devis, factures, RDV, clients, support)
+    support-history.tsx # Historique des demandes support (admin)
     quote-detail.tsx    # Détail devis (lecture seule, PDF)
     invoice-detail.tsx  # Détail facture (lecture seule, PDF)
     reservation-detail.tsx # Détail rendez-vous (lecture seule)
