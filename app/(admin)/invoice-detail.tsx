@@ -21,6 +21,15 @@ const STATUS_COLORS: Record<string, string> = {
   overdue: "#EF4444", sent: "#8B5CF6", draft: "#6B7280",
 };
 
+const PAYMENT_METHODS: Record<string, string> = {
+  wire_transfer: "Virement bancaire",
+  credit_card: "Carte de crédit",
+  bank_transfer: "Virement",
+  check: "Chèque",
+  cash: "Espèces",
+  debit_card: "Carte de débit",
+};
+
 function resolveClient(inv: any, clientMap: Record<string, any>): { name: string; email: string; phone: string } {
   const c = inv?.client || (inv?.clientId && clientMap[String(inv.clientId)]) || null;
   let name = "";
@@ -200,8 +209,8 @@ export default function InvoiceDetailScreen() {
           ) : null}
           {inv.paymentMethod ? (
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Paiement</Text>
-              <Text style={styles.value}>{inv.paymentMethod}</Text>
+              <Text style={styles.label}>Mode de paiement</Text>
+              <Text style={styles.value}>{PAYMENT_METHODS[inv.paymentMethod] || inv.paymentMethod}</Text>
             </View>
           ) : null}
         </View>

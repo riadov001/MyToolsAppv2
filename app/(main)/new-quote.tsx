@@ -103,7 +103,7 @@ export default function NewQuoteScreen() {
         }
       }
       formData.append("serviceId", selectedServices[0]);
-      formData.append("paymentMethod", "wire_transfer");
+      formData.append("paymentMethod", "virement_bancaire");
       formData.append("requestDetails", notes.trim() || "Demande via application mobile");
       formData.append("vehicleInfo", JSON.stringify({ notes }));
 
