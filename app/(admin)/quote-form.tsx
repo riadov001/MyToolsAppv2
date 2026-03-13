@@ -441,7 +441,7 @@ export default function QuoteFormScreen() {
                   {(selectedClient.firstName?.[0] || "").toUpperCase()}{(selectedClient.lastName?.[0] || "").toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.selectorText}>{selectedClient.firstName} {selectedClient.lastName}</Text>
+              <Text style={styles.selectorText}>{(selectedClient.firstName || selectedClient.lastName) ? `${selectedClient.firstName || ""} ${selectedClient.lastName || ""}`.trim() : (selectedClient.email || "Client")}</Text>
             </View>
           ) : (
             <Text style={[styles.selectorText, { color: theme.textTertiary }]}>Sélectionner un client...</Text>
