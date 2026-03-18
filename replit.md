@@ -228,7 +228,7 @@ Le fichier `.eas/workflows/build-and-submit.yml` déclenche automatiquement (pus
      eas secret:create --scope project --name GOOGLE_SERVICE_ACCOUNT_KEY --type file --value ./chemin/vers/cle.json
      ```
    - `eas.json` référence automatiquement ce secret via `"serviceAccountKeyPath": "$GOOGLE_SERVICE_ACCOUNT_KEY"`. Ne jamais committer la clé dans le dépôt.
-   - **Champ optionnel** `applicationId` dans `eas.json > submit.production.android` : déjà défini à `eu.mytoolsgroup.admin`. Modifier si le bundle ID change.
+   - **Champ optionnel** `applicationId` dans `eas.json > submit.production.android` : déjà défini à `com.mytools.app` (doit correspondre au `package` dans `app.json`). Modifier si le bundle ID change.
 3. **Keystore Android** : Géré automatiquement par EAS Build (première build génère et stocke la clé). Pour utiliser une clé existante, configurer via `eas credentials`.
 
 ### Prérequis avant le premier build iOS
