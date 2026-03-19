@@ -257,6 +257,84 @@ export default function InvoiceCreateScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Quote Picker */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.sectionTitle}>Devis source</Text>
+            {selectedQuote && (
+              <Pressable onPress={() => { setSelectedQuoteId(null); setLineItems([{ description: "", quantity: "1", unitPrice: "", tvaRate: "20" }]); setSelectedClientId(null); setNotes(""); }}>
+                <Text style={{ fontSize: 11, color: theme.textTertiary, fontFamily: "Inter_400Regular" }}>Effacer</Text>
+              </Pressable>
+            )}
+          </View>
+          {selectedQuote ? (
+            <Pressable style={[styles.quoteSelected]} onPress={() => setShowQuotePicker(!showQuotePicker)}>
+              <View style={styles.quoteSelectedIcon}>
+                <Ionicons name="document-text" size={18} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.quoteSelectedRef}>{selectedQuote.quoteNumber || selectedQuote.reference || `Devis #${selectedQuote.id}`}</Text>
+                <Text style={styles.quoteSelectedSub} numberOfLines={1}>
+                  {`${selectedQuote.clientFirstName || ""} ${selectedQuote.clientLastName || ""}`.trim() || selectedQuote.clientName || ""}
+                  {selectedQuote.totalTTC ? ` · ${Number(selectedQuote.totalTTC).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}` : ""}
+                </Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            </Pressable>
+          ) : (
+            <Pressable style={styles.pickerBtn} onPress={() => setShowQuotePicker(!showQuotePicker)}>
+              <Text style={[styles.pickerText, { color: theme.textTertiary }]}>{selectedQuoteLabel}</Text>
+              <Ionicons name={showQuotePicker ? "chevron-up" : "chevron-down"} size={18} color={theme.textTertiary} />
+            </Pressable>
+          )}
+          {showQuotePicker && (
+            <View style={styles.clientDropdown}>
+              <View style={styles.clientSearch}>
+                <Ionicons name="search" size={15} color={theme.textTertiary} />
+                <TextInput
+                  style={styles.clientSearchInput}
+                  placeholder="Rechercher un devis..."
+                  placeholderTextColor={theme.textTertiary}
+                  value={quoteSearch}
+                  onChangeText={setQuoteSearch}
+                  autoCapitalize="none"
+                />
+              </View>
+              <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+                {quotesLoading ? (
+                  <ActivityIndicator size="small" color={theme.primary} style={{ padding: 12 }} />
+                ) : filteredQuotes.length === 0 ? (
+                  <Text style={styles.noClient}>Aucun devis trouvé</Text>
+                ) : (
+                  filteredQuotes.map((q: any) => {
+                    const clientName = `${q.clientFirstName || ""} ${q.clientLastName || ""}`.trim() || q.clientName || "";
+                    const ref = q.quoteNumber || q.reference || `Devis #${q.id}`;
+                    const amount = q.totalTTC ? Number(q.totalTTC).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "";
+                    return (
+                      <Pressable
+                        key={q.id}
+                        style={[styles.clientOption, String(selectedQuoteId) === String(q.id) && { backgroundColor: theme.primary + "20" }]}
+                        onPress={() => applyQuote(q)}
+                      >
+                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                          <Text style={[styles.clientOptionName, String(selectedQuoteId) === String(q.id) && { color: theme.primary }]}>{ref}</Text>
+                          {amount ? <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>{amount}</Text> : null}
+                        </View>
+                        {clientName ? <Text style={styles.clientOptionEmail}>{clientName}</Text> : null}
+                      </Pressable>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
+          )}
+          {!selectedQuote && (
+            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textTertiary, marginTop: 2 }}>
+              Sélectionnez un devis pour pré-remplir le client et les prestations automatiquement.
+            </Text>
+          )}
+        </View>
+
         {/* Client Picker */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Client *</Text>
@@ -508,6 +586,14 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
   clientOption: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border, gap: 2 },
   clientOptionName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: theme.text },
   clientOptionEmail: { fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textTertiary },
+  quoteSelected: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: theme.primary + "10", borderRadius: 10, borderWidth: 1,
+    borderColor: theme.primary + "40", paddingHorizontal: 12, paddingVertical: 10,
+  },
+  quoteSelectedIcon: { width: 34, height: 34, borderRadius: 8, backgroundColor: theme.primary + "15", justifyContent: "center", alignItems: "center" },
+  quoteSelectedRef: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary },
+  quoteSelectedSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textSecondary },
   input: {
     backgroundColor: theme.inputBg || theme.background, borderRadius: 10, borderWidth: 1,
     borderColor: theme.inputBorder || theme.border, paddingHorizontal: 12, paddingVertical: 10,

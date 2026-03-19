@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { adminReservations, adminClients } from "@/lib/admin-api";
+import { adminReservations, adminClients, adminQuotes, adminServices } from "@/lib/admin-api";
 import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
@@ -38,6 +38,54 @@ export default function ReservationCreateScreen() {
   const [time, setTime] = useState(defaultTime);
   const [notes, setNotes] = useState(quoteName ? `Devis: ${quoteName}` : "");
   const [serviceType, setServiceType] = useState("");
+
+  const [pickedQuoteId, setPickedQuoteId] = useState<string>(quoteId);
+  const [pickedQuoteName, setPickedQuoteName] = useState<string>(quoteName);
+  const [showQuotePicker, setShowQuotePicker] = useState(false);
+  const [quoteSearch, setQuoteSearch] = useState("");
+
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [showServicePicker, setShowServicePicker] = useState(false);
+
+  const { data: services = [], isLoading: servicesLoading } = useQuery({
+    queryKey: ["admin-services"],
+    queryFn: adminServices.getAll,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const servicesArr = Array.isArray(services) ? services : [];
+  const selectedService = servicesArr.find((s: any) => String(s.id) === String(selectedServiceId));
+  const serviceLabel = selectedService
+    ? (selectedService.name || selectedService.title || `Service #${selectedService.id}`)
+    : "Sélectionner un service *";
+
+  const { data: quotes = [], isLoading: quotesLoading } = useQuery({
+    queryKey: ["admin-quotes"],
+    queryFn: adminQuotes.getAll,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const quotesArr = Array.isArray(quotes) ? quotes : [];
+  const filteredQuotes = quotesArr.filter((q: any) => {
+    if (!quoteSearch) return true;
+    const s = quoteSearch.toLowerCase();
+    const ref = (q.quoteNumber || q.reference || "").toLowerCase();
+    const cn = `${q.clientFirstName || ""} ${q.clientLastName || ""} ${q.clientName || ""}`.toLowerCase();
+    return ref.includes(s) || cn.includes(s);
+  });
+  const selectedQuoteObj = quotesArr.find((q: any) => String(q.id) === String(pickedQuoteId));
+
+  const applyQuote = (q: any) => {
+    const ref = q.quoteNumber || q.reference || `Devis #${q.id}`;
+    setPickedQuoteId(String(q.id));
+    setPickedQuoteName(ref);
+    setShowQuotePicker(false);
+    setQuoteSearch("");
+    if (q.clientId) setSelectedClientId(String(q.clientId));
+    if (!notes) setNotes(`Devis: ${ref}`);
+    const qServiceId = q.serviceId || (Array.isArray(q.services) && q.services[0]?.id) || "";
+    if (qServiceId) setSelectedServiceId(String(qServiceId));
+  };
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["admin-clients"],
@@ -72,7 +120,8 @@ export default function ReservationCreateScreen() {
         date: scheduledDate.toISOString(),
         status: "pending",
       };
-      if (quoteId) payload.quoteId = quoteId;
+      if (pickedQuoteId) payload.quoteId = pickedQuoteId;
+      if (selectedServiceId) payload.serviceId = selectedServiceId;
       if (serviceType) payload.serviceType = serviceType;
       if (notes) payload.notes = notes;
       return adminReservations.create(payload);
@@ -100,7 +149,7 @@ export default function ReservationCreateScreen() {
 
   const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
   const isValidTime = /^\d{2}:\d{2}$/.test(time);
-  const canSubmit = !!selectedClientId && isValidDate && isValidTime && !mutation.isPending;
+  const canSubmit = !!selectedClientId && !!selectedServiceId && isValidDate && isValidTime && !mutation.isPending;
 
   const topPad = Platform.OS === "web" ? 67 + 16 : insets.top + 16;
   const bottomPad = Platform.OS === "web" ? 34 + 24 : insets.bottom + 24;
@@ -120,10 +169,71 @@ export default function ReservationCreateScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Quote Picker */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.sectionTitle}>Devis lié</Text>
+            {pickedQuoteId && !paramClientId && (
+              <Pressable onPress={() => { setPickedQuoteId(""); setPickedQuoteName(""); setSelectedClientId(""); setSelectedServiceId(""); }}>
+                <Text style={{ fontSize: 11, color: theme.textTertiary, fontFamily: "Inter_400Regular" }}>Effacer</Text>
+              </Pressable>
+            )}
+          </View>
+          {pickedQuoteId ? (
+            <View style={styles.quoteSelected}>
+              <View style={styles.quoteSelectedIcon}>
+                <Ionicons name="document-text" size={18} color={theme.primary} />
+              </View>
+              <Text style={styles.quoteSelectedRef}>{pickedQuoteName || `Devis #${pickedQuoteId}`}</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            </View>
+          ) : (
+            <>
+              <Pressable style={styles.pickerBtn} onPress={() => setShowQuotePicker(!showQuotePicker)}>
+                <Text style={[styles.pickerText, { color: theme.textTertiary }]}>Sélectionner un devis (optionnel)</Text>
+                <Ionicons name={showQuotePicker ? "chevron-up" : "chevron-down"} size={18} color={theme.textTertiary} />
+              </Pressable>
+              {showQuotePicker && (
+                <View style={styles.clientDropdown}>
+                  <View style={styles.clientSearch}>
+                    <Ionicons name="search" size={15} color={theme.textTertiary} />
+                    <TextInput
+                      style={styles.clientSearchInput}
+                      placeholder="Rechercher un devis..."
+                      placeholderTextColor={theme.textTertiary}
+                      value={quoteSearch}
+                      onChangeText={setQuoteSearch}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                  <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                    {quotesLoading ? (
+                      <ActivityIndicator size="small" color={theme.primary} style={{ padding: 12 }} />
+                    ) : filteredQuotes.length === 0 ? (
+                      <Text style={styles.noClient}>Aucun devis trouvé</Text>
+                    ) : (
+                      filteredQuotes.map((q: any) => {
+                        const ref = q.quoteNumber || q.reference || `Devis #${q.id}`;
+                        const cn = `${q.clientFirstName || ""} ${q.clientLastName || ""}`.trim() || q.clientName || "";
+                        return (
+                          <Pressable key={q.id} style={styles.clientOption} onPress={() => applyQuote(q)}>
+                            <Text style={styles.clientOptionName}>{ref}</Text>
+                            {cn ? <Text style={styles.clientOptionEmail}>{cn}</Text> : null}
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+
         {/* Client Picker */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Client *</Text>
-          {paramClientId && selectedClient ? (
+          {(paramClientId || pickedQuoteId) && selectedClient ? (
             <View style={styles.clientRow}>
               <View style={styles.clientAvatar}>
                 <Ionicons name="person" size={18} color={theme.primary} />
@@ -161,11 +271,7 @@ export default function ReservationCreateScreen() {
                         <Pressable
                           key={c.id}
                           style={[styles.clientOption, String(selectedClientId) === String(c.id) && { backgroundColor: theme.primary + "20" }]}
-                          onPress={() => {
-                            setSelectedClientId(String(c.id));
-                            setShowClientPicker(false);
-                            setClientSearch("");
-                          }}
+                          onPress={() => { setSelectedClientId(String(c.id)); setShowClientPicker(false); setClientSearch(""); }}
                         >
                           <Text style={[styles.clientOptionName, String(selectedClientId) === String(c.id) && { color: theme.primary }]}>
                             {`${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email}
@@ -179,12 +285,51 @@ export default function ReservationCreateScreen() {
               )}
             </>
           )}
-          {quoteId ? (
-            <View style={styles.quoteRef}>
-              <Ionicons name="document-text-outline" size={14} color={theme.primary} />
-              <Text style={styles.quoteRefText}>Devis lié : {quoteName || quoteId}</Text>
+        </View>
+
+        {/* Service Picker */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service *</Text>
+          {selectedService ? (
+            <View style={styles.quoteSelected}>
+              <View style={styles.quoteSelectedIcon}>
+                <Ionicons name="construct" size={18} color={theme.primary} />
+              </View>
+              <Text style={[styles.quoteSelectedRef, { flex: 1 }]}>{serviceLabel}</Text>
+              <Pressable onPress={() => setSelectedServiceId("")}>
+                <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
+              </Pressable>
             </View>
-          ) : null}
+          ) : (
+            <Pressable style={styles.pickerBtn} onPress={() => setShowServicePicker(!showServicePicker)}>
+              <Text style={[styles.pickerText, { color: theme.textTertiary }]}>{serviceLabel}</Text>
+              <Ionicons name={showServicePicker ? "chevron-up" : "chevron-down"} size={18} color={theme.textTertiary} />
+            </Pressable>
+          )}
+          {showServicePicker && !selectedService && (
+            <View style={[styles.clientDropdown, { marginTop: 4 }]}>
+              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                {servicesLoading ? (
+                  <ActivityIndicator size="small" color={theme.primary} style={{ padding: 12 }} />
+                ) : servicesArr.length === 0 ? (
+                  <Text style={styles.noClient}>Aucun service disponible</Text>
+                ) : (
+                  servicesArr.map((s: any) => (
+                    <Pressable
+                      key={s.id}
+                      style={[styles.clientOption, String(selectedServiceId) === String(s.id) && { backgroundColor: theme.primary + "20" }]}
+                      onPress={() => { setSelectedServiceId(String(s.id)); setShowServicePicker(false); }}
+                    >
+                      <Text style={[styles.clientOptionName, String(selectedServiceId) === String(s.id) && { color: theme.primary }]}>
+                        {s.name || s.title || `Service #${s.id}`}
+                      </Text>
+                      {s.description ? <Text style={styles.clientOptionEmail} numberOfLines={1}>{s.description}</Text> : null}
+                    </Pressable>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
         {/* Date & Time */}
@@ -212,18 +357,6 @@ export default function ReservationCreateScreen() {
               keyboardType="numbers-and-punctuation"
             />
           </View>
-        </View>
-
-        {/* Service */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service (optionnel)</Text>
-          <TextInput
-            style={styles.input}
-            value={serviceType}
-            onChangeText={setServiceType}
-            placeholder="Ex: Vidange, Révision, Diagnostic..."
-            placeholderTextColor={theme.textTertiary}
-          />
         </View>
 
         {/* Notes */}
@@ -290,6 +423,13 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
   clientName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: theme.text, flex: 1 },
   quoteRef: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   quoteRefText: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.primary },
+  quoteSelected: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: theme.primary + "10", borderRadius: 10, borderWidth: 1,
+    borderColor: theme.primary + "40", paddingHorizontal: 12, paddingVertical: 10,
+  },
+  quoteSelectedIcon: { width: 34, height: 34, borderRadius: 8, backgroundColor: theme.primary + "15", justifyContent: "center", alignItems: "center" },
+  quoteSelectedRef: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary },
   field: { gap: 4 },
   fieldLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: theme.textSecondary },
   input: {

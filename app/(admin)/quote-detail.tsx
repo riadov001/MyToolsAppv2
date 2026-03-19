@@ -90,7 +90,26 @@ export default function QuoteDetailScreen() {
   });
 
   const invoiceMutation = useMutation({
-    mutationFn: () => adminQuotes.convertToInvoice(id),
+    mutationFn: () => {
+      const quote = queryClient.getQueryData<any>(["admin-quote", id]);
+      const ttc = Number(quote?.quoteAmount || quote?.totalTTC || quote?.total || quote?.totalIncludingTax || quote?.amount || quote?.totalAmount || 0);
+      const ht = Number(quote?.priceExcludingTax || quote?.totalHT || quote?.totalExcludingTax || quote?.subtotal || 0);
+      const tva = Number(quote?.taxAmount || quote?.tvaAmount || quote?.taxTotal || 0);
+      const body: any = {
+        amount: ttc,
+        totalTTC: ttc,
+        total: ttc,
+        totalHT: ht,
+        priceExcludingTax: ht,
+        taxAmount: tva,
+        clientId: quote?.clientId,
+        quoteId: id,
+        items: quote?.items || quote?.lineItems || [],
+        lineItems: quote?.items || quote?.lineItems || [],
+        status: "pending",
+      };
+      return adminQuotes.convertToInvoice(id, body);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });
