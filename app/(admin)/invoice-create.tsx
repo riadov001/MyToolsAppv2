@@ -3,7 +3,6 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert,
   TextInput, ActivityIndicator, FlatList,
 } from "react-native";
-import { DateTimePicker } from "@/components/DateTimePicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
@@ -59,22 +58,14 @@ function fmtEur(n: number): string {
   return n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 }
 
+function getToday(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 function getDefaultDueDate(): string {
   const d = new Date();
-  d.setDate(d.getDate() + 30);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function getToday(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function toDateOnly(iso: string): string {
-  if (!iso) return "";
-  return new Date(iso).toISOString().split("T")[0];
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split("T")[0];
 }
 
 export default function InvoiceCreateScreen() {
@@ -91,8 +82,8 @@ export default function InvoiceCreateScreen() {
   const [clientSearch, setClientSearch] = useState("");
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [notes, setNotes] = useState("");
-  const [issueDate, setIssueDate] = useState(getToday());
-  const [dueDate, setDueDate] = useState(getDefaultDueDate());
+  const issueDate = getToday();
+  const dueDate = getDefaultDueDate();
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [showPaymentPicker, setShowPaymentPicker] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -242,8 +233,8 @@ export default function InvoiceCreateScreen() {
     };
 
     if (notes.trim()) payload.notes = notes.trim();
-    if (dueDate) payload.dueDate = toDateOnly(dueDate);
-    if (issueDate) payload.issueDate = toDateOnly(issueDate);
+    payload.dueDate = dueDate;
+    payload.issueDate = issueDate;
     if (paymentMethod) payload.paymentMethod = paymentMethod;
 
     console.log("[INVOICE-CREATE] Payload items:", mappedItems.length, "photos:", photos.length, "totalTTC:", totalTTC);
@@ -328,17 +319,14 @@ export default function InvoiceCreateScreen() {
         {/* Dates */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dates</Text>
-          <DateTimePicker
-            label="Date de création / d'émission"
-            value={issueDate}
-            onChange={setIssueDate}
-          />
-          <DateTimePicker
-            label="Date d'échéance"
-            value={dueDate}
-            onChange={setDueDate}
-            minDate={new Date()}
-          />
+          <View style={styles.dateReadRow}>
+            <Text style={styles.dateReadLabel}>Date d'émission</Text>
+            <Text style={styles.dateReadValue}>{issueDate}</Text>
+          </View>
+          <View style={styles.dateReadRow}>
+            <Text style={styles.dateReadLabel}>Date d'échéance</Text>
+            <Text style={styles.dateReadValue}>{dueDate}</Text>
+          </View>
         </View>
 
         {/* Mode de paiement */}
@@ -553,6 +541,9 @@ export default function InvoiceCreateScreen() {
 
 function getStyles(theme: ThemeColors) {
   return StyleSheet.create({
+    dateReadRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10 },
+    dateReadLabel: { fontSize: 14, fontFamily: "Inter_400Regular", color: theme.textSecondary },
+    dateReadValue: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary },
     container: { flex: 1, backgroundColor: theme.background },
     header: {
       flexDirection: "row",
