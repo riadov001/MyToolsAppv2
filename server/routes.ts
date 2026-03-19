@@ -1249,36 +1249,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.use("/api/mobile/invoices", (req: Request, res: Response, next: NextFunction) => {
+  async function mobileCrudProxy(
+    req: Request, res: Response,
+    primarySegment: string,
+    fallbackSegments: string[]
+  ) {
+    const urlSuffix = req.url === "/" ? "" : req.url;
+    const authHeaders: Record<string, string> = {
+      "host": new URL(EXTERNAL_API).host,
+      "accept": "application/json",
+      "x-requested-with": "XMLHttpRequest",
+      "content-type": "application/json",
+    };
+    if (req.headers["authorization"]) authHeaders["authorization"] = req.headers["authorization"] as string;
+    if (req.headers["cookie"]) authHeaders["cookie"] = req.headers["cookie"] as string;
+
+    const fetchOpts: RequestInit = { method: req.method, headers: authHeaders, redirect: "manual" };
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      fetchOpts.body = JSON.stringify(req.body);
+    }
+
+    const tryUrl = async (url: string) => {
+      try {
+        const r = await fetch(url, fetchOpts);
+        const txt = await r.text();
+        if (txt.includes("<!DOCTYPE") || txt.includes("<html")) return null;
+        return { status: r.status, text: txt, headers: r.headers };
+      } catch { return null; }
+    };
+
+    const segments = [primarySegment, ...fallbackSegments];
+    let result: { status: number; text: string; headers: Headers } | null = null;
+    let usedSeg = primarySegment;
+
+    for (const seg of segments) {
+      const url = `${EXTERNAL_API}/${seg}${urlSuffix}`;
+      result = await tryUrl(url);
+      if (result) { usedSeg = seg; break; }
+    }
+
+    if (!result) {
+      console.log(`[MOBILE-CRUD] ${req.method} /${primarySegment}${urlSuffix} => HTML/not-found (${segments.length} urls tried)`);
+      return res.status(404).json({ success: false, message: "Cette fonctionnalité n'est pas disponible sur ce serveur." });
+    }
+
+    console.log(`[MOBILE-CRUD] ${req.method} /${usedSeg}${urlSuffix} => ${result.status}`);
+    result.headers.forEach((value, key) => {
+      const lk = key.toLowerCase();
+      if (["transfer-encoding", "content-encoding", "content-length"].includes(lk)) return;
+      if (lk === "set-cookie") { res.appendHeader("set-cookie", value); return; }
+    });
+    try { return res.status(result.status).json(JSON.parse(result.text)); }
+    catch { return res.status(result.status).send(result.text); }
+  }
+
+  app.use("/api/mobile/invoices", async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers["authorization"] || "";
-    if (!isReviewerToken(auth)) return next();
-    const method = req.method;
-    const id = req.params[0] || req.url.split("/").filter(Boolean)[0] || "";
-    if (method === "POST") return res.status(201).json({ ...req.body, id: "demo-i-new-" + Date.now(), invoiceNumber: "F-0036", status: req.body?.status || "pending", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_INVOICES[0], ...req.body, id, updatedAt: new Date().toISOString() });
-    if (method === "DELETE") return res.json({ success: true, message: "Facture supprimée" });
-    return next();
+    if (isReviewerToken(auth)) {
+      const method = req.method;
+      const id = req.url.split("/").filter(Boolean)[0] || "";
+      if (method === "POST") return res.status(201).json({ ...req.body, id: "demo-i-new-" + Date.now(), invoiceNumber: "F-0036", status: req.body?.status || "pending", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_INVOICES[0], ...req.body, id, updatedAt: new Date().toISOString() });
+      if (method === "DELETE") return res.json({ success: true, message: "Facture supprimée" });
+      return next();
+    }
+    return mobileCrudProxy(req, res, "mobile/invoices", ["mobile/admin/invoices", "admin/invoices"]);
   });
 
-  app.use("/api/mobile/reservations", (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/mobile/reservations", async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers["authorization"] || "";
-    if (!isReviewerToken(auth)) return next();
-    const method = req.method;
-    const id = req.params[0] || req.url.split("/").filter(Boolean)[0] || "";
-    if (method === "POST") return res.status(201).json({ ...req.body, id: "demo-r-new-" + Date.now(), reference: "RDV-2026-019", status: req.body?.status || "pending", scheduledDate: req.body?.scheduledDate || new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_RESERVATIONS[0], ...req.body, id, updatedAt: new Date().toISOString() });
-    if (method === "DELETE") return res.json({ success: true, message: "Réservation supprimée" });
-    return next();
+    if (isReviewerToken(auth)) {
+      const method = req.method;
+      const id = req.url.split("/").filter(Boolean)[0] || "";
+      if (method === "POST") return res.status(201).json({ ...req.body, id: "demo-r-new-" + Date.now(), reference: "RDV-2026-019", status: req.body?.status || "pending", scheduledDate: req.body?.scheduledDate || new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_RESERVATIONS[0], ...req.body, id, updatedAt: new Date().toISOString() });
+      if (method === "DELETE") return res.json({ success: true, message: "Réservation supprimée" });
+      return next();
+    }
+    return mobileCrudProxy(req, res, "mobile/reservations", ["mobile/admin/reservations", "admin/reservations"]);
   });
 
-  app.use("/api/mobile/quotes", (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/mobile/quotes", async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers["authorization"] || "";
-    if (!isReviewerToken(auth)) return next();
-    const method = req.method;
-    const id = req.params[0] || req.url.split("/").filter(Boolean)[0] || "";
-    if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_QUOTES[0], ...req.body, id, updatedAt: new Date().toISOString() });
-    if (method === "DELETE") return res.json({ success: true, message: "Devis supprimé" });
-    return next();
+    if (isReviewerToken(auth)) {
+      const method = req.method;
+      const id = req.url.split("/").filter(Boolean)[0] || "";
+      if (method === "PATCH") return res.json({ ...REVIEWER_DEMO_QUOTES[0], ...req.body, id, updatedAt: new Date().toISOString() });
+      if (method === "DELETE") return res.json({ success: true, message: "Devis supprimé" });
+      return next();
+    }
+    return mobileCrudProxy(req, res, "mobile/quotes", ["mobile/admin/quotes", "admin/quotes"]);
   });
 
   app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
