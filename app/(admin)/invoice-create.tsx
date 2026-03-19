@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert,
   TextInput, ActivityIndicator, FlatList,
 } from "react-native";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
@@ -61,7 +62,19 @@ function fmtEur(n: number): string {
 function getDefaultDueDate(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
-  return d.toISOString().split("T")[0];
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function getToday(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function toDateOnly(iso: string): string {
+  if (!iso) return "";
+  return new Date(iso).toISOString().split("T")[0];
 }
 
 export default function InvoiceCreateScreen() {
@@ -83,6 +96,7 @@ export default function InvoiceCreateScreen() {
   const [clientSearch, setClientSearch] = useState("");
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [notes, setNotes] = useState("");
+  const [issueDate, setIssueDate] = useState(getToday());
   const [dueDate, setDueDate] = useState(getDefaultDueDate());
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [showPaymentPicker, setShowPaymentPicker] = useState(false);
@@ -254,30 +268,23 @@ export default function InvoiceCreateScreen() {
       };
     });
 
+    const dominantTva = validItems.length > 0
+      ? (parseFloat(validItems[0].tvaRate) || 20).toString()
+      : "20";
+
     const payload: any = {
       clientId: selectedClientId,
       status: "pending",
       items: mappedItems,
-      lineItems: mappedItems,
       totalHT: totalHT.toFixed(2),
       totalTTC: totalTTC.toFixed(2),
-      totalAmount: totalTTC.toFixed(2),
-      amount: totalTTC.toFixed(2),
-      total: totalTTC.toFixed(2),
-      priceExcludingTax: totalHT.toFixed(2),
-      totalExcludingTax: totalHT.toFixed(2),
-      taxAmount: totalTVA.toFixed(2),
-      photos: photos.map(p => p.uri),
-      mediaFiles: photos.map(p => p.uri),
-      attachments: photos.map(p => p.uri),
+      tvaRate: dominantTva,
     };
 
     if (selectedQuoteId) payload.quoteId = selectedQuoteId;
-    if (notes.trim()) {
-      payload.notes = notes.trim();
-      payload.description = notes.trim();
-    }
-    if (dueDate) payload.dueDate = dueDate;
+    if (notes.trim()) payload.notes = notes.trim();
+    if (dueDate) payload.dueDate = toDateOnly(dueDate);
+    if (issueDate) payload.issueDate = toDateOnly(issueDate);
     if (paymentMethod) payload.paymentMethod = paymentMethod;
 
     console.log("[INVOICE-CREATE] Payload items:", mappedItems.length, "photos:", photos.length, "totalTTC:", totalTTC);
@@ -437,16 +444,19 @@ export default function InvoiceCreateScreen() {
           )}
         </View>
 
-        {/* Échéance */}
+        {/* Dates */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date d'échéance (optionnel)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.textTertiary}
+          <Text style={styles.sectionTitle}>Dates</Text>
+          <DateTimePicker
+            label="Date de création / d'émission"
+            value={issueDate}
+            onChange={setIssueDate}
+          />
+          <DateTimePicker
+            label="Date d'échéance"
             value={dueDate}
-            onChangeText={setDueDate}
-            keyboardType="numbers-and-punctuation"
+            onChange={setDueDate}
+            minDate={new Date()}
           />
         </View>
 

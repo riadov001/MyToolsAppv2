@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
   TextInput, ActivityIndicator,
 } from "react-native";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,17 +26,17 @@ export default function ReservationCreateScreen() {
   const queryClient = useQueryClient();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  const today = new Date();
-  const tomorrow = new Date(today);
+  const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const defaultDate = tomorrow.toISOString().split("T")[0];
-  const defaultTime = "09:00";
+  tomorrow.setHours(9, 0, 0, 0);
+  const defaultStartISO = tomorrow.toISOString();
+  const defaultEndISO = new Date(tomorrow.getTime() + 60 * 60 * 1000).toISOString();
 
   const [selectedClientId, setSelectedClientId] = useState<string>(paramClientId);
   const [clientSearch, setClientSearch] = useState("");
   const [showClientPicker, setShowClientPicker] = useState(false);
-  const [date, setDate] = useState(defaultDate);
-  const [time, setTime] = useState(defaultTime);
+  const [startDate, setStartDate] = useState(defaultStartISO);
+  const [endDate, setEndDate] = useState(defaultEndISO);
   const [notes, setNotes] = useState(quoteName ? `Devis: ${quoteName}` : "");
   const [serviceType, setServiceType] = useState("");
 
@@ -111,15 +112,13 @@ export default function ReservationCreateScreen() {
 
   const mutation = useMutation({
     mutationFn: () => {
-      if (!selectedClientId) {
-        throw new Error("Veuillez sélectionner un client.");
-      }
-      const scheduledDate = new Date(`${date}T${time}:00`);
+      if (!selectedClientId) throw new Error("Veuillez sélectionner un client.");
       const payload: any = {
         clientId: selectedClientId,
         serviceId: selectedServiceId || "",
-        scheduledDate: scheduledDate.toISOString(),
-        date: scheduledDate.toISOString(),
+        scheduledDate: startDate,
+        date: startDate,
+        estimatedEndDate: endDate,
         status: "pending",
       };
       if (pickedQuoteId) payload.quoteId = pickedQuoteId;
@@ -148,9 +147,7 @@ export default function ReservationCreateScreen() {
     },
   });
 
-  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
-  const isValidTime = /^\d{2}:\d{2}$/.test(time);
-  const canSubmit = !!selectedClientId && !!selectedServiceId && isValidDate && isValidTime && !mutation.isPending;
+  const canSubmit = !!selectedClientId && !!selectedServiceId && !!startDate && !mutation.isPending;
 
   const topPad = Platform.OS === "web" ? 67 + 16 : insets.top + 16;
   const bottomPad = Platform.OS === "web" ? 34 + 24 : insets.bottom + 24;
@@ -335,29 +332,28 @@ export default function ReservationCreateScreen() {
 
         {/* Date & Time */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Date et heure *</Text>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Date</Text>
-            <TextInput
-              style={styles.input}
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.textTertiary}
-              keyboardType="numbers-and-punctuation"
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Heure</Text>
-            <TextInput
-              style={styles.input}
-              value={time}
-              onChangeText={setTime}
-              placeholder="HH:MM"
-              placeholderTextColor={theme.textTertiary}
-              keyboardType="numbers-and-punctuation"
-            />
-          </View>
+          <Text style={styles.sectionTitle}>Dates *</Text>
+          <DateTimePicker
+            label="Date et heure de début"
+            value={startDate}
+            onChange={(iso) => {
+              setStartDate(iso);
+              const start = new Date(iso);
+              const end = new Date(endDate);
+              if (end <= start) {
+                setEndDate(new Date(start.getTime() + 60 * 60 * 1000).toISOString());
+              }
+            }}
+            showTime
+            minDate={new Date()}
+          />
+          <DateTimePicker
+            label="Date et heure de fin"
+            value={endDate}
+            onChange={setEndDate}
+            showTime
+            minDate={startDate ? new Date(startDate) : new Date()}
+          />
         </View>
 
         {/* Notes */}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, TextInput, ActivityIndicator, Alert, FlatList,
 } from "react-native";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
@@ -57,6 +58,11 @@ export default function QuoteCreateScreen() {
   const [clientSearch, setClientSearch] = useState("");
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [notes, setNotes] = useState("");
+
+  const todayISO = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); })();
+  const defaultValidUntil = (() => { const d = new Date(); d.setDate(d.getDate() + 30); d.setHours(0, 0, 0, 0); return d.toISOString(); })();
+  const [issueDate, setIssueDate] = useState(todayISO);
+  const [validUntil, setValidUntil] = useState(defaultValidUntil);
   const [vehicleBrand, setVehicleBrand] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
@@ -215,27 +221,21 @@ export default function QuoteCreateScreen() {
       plate: vehiclePlate.trim() || undefined,
     } : undefined;
 
+    const toDateOnly = (iso: string) => iso ? new Date(iso).toISOString().split("T")[0] : undefined;
+
     const payload: any = {
       clientId: selectedClientId,
-      serviceId: selectedServices[0],
       status: "pending",
-      notes: notes.trim() || undefined,
-      description: notes.trim() || undefined,
       items: mappedItems,
-      lineItems: mappedItems,
       totalHT: totalHT.toFixed(2),
       totalTTC: totalTTC.toFixed(2),
-      totalAmount: totalTTC.toFixed(2),
-      quoteAmount: totalTTC.toFixed(2),
-      amount: totalTTC.toFixed(2),
-      total: totalTTC.toFixed(2),
-      priceExcludingTax: totalHT.toFixed(2),
-      totalExcludingTax: totalHT.toFixed(2),
-      taxAmount: totalTVA.toFixed(2),
-      photos: photos.map(p => p.uri),
-      mediaFiles: photos.map(p => p.uri),
-      attachments: photos.map(p => p.uri),
+      tvaRate: validItems.length > 0 ? String(parseFloat(validItems[0].tvaRate) || 20) : "20",
     };
+
+    if (notes.trim()) payload.notes = notes.trim();
+    if (selectedServices[0]) payload.serviceId = selectedServices[0];
+    if (issueDate) payload.issueDate = toDateOnly(issueDate);
+    if (validUntil) payload.validUntil = toDateOnly(validUntil);
 
     if (vehicleInfo) {
       payload.vehicleInfo = vehicleInfo;
@@ -337,6 +337,22 @@ export default function QuoteCreateScreen() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+          />
+        </View>
+
+        {/* Dates */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dates</Text>
+          <DateTimePicker
+            label="Date de création"
+            value={issueDate}
+            onChange={setIssueDate}
+          />
+          <DateTimePicker
+            label="Date d'expiration"
+            value={validUntil}
+            onChange={setValidUntil}
+            minDate={new Date()}
           />
         </View>
 
