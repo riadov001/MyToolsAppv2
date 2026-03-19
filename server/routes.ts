@@ -1270,11 +1270,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (incomingCt.includes("multipart/form-data")) {
         authHeaders["content-type"] = incomingCt;
         fetchOpts.body = (req as any).rawBody as Buffer;
-        console.log(`[MOBILE-CRUD-BODY] ${req.method} /${primarySegment}${urlSuffix} multipart, size=${((req as any).rawBody as Buffer)?.length}`);
+        const formDataLog = `${req.method} /${primarySegment}${urlSuffix} multipart, size=${((req as any).rawBody as Buffer)?.length} bytes`;
+        console.log(`[MOBILE-CRUD-BODY] ${formDataLog}`);
       } else {
         fetchOpts.body = JSON.stringify(req.body);
         if (req.method === "POST") {
-          console.log(`[MOBILE-CRUD-BODY] ${req.method} /${primarySegment}${urlSuffix} body:`, JSON.stringify(req.body).substring(0, 500));
+          const bodyLog = JSON.stringify(req.body).substring(0, 500);
+          console.log(`[MOBILE-CRUD-BODY] ${req.method} /${primarySegment}${urlSuffix} body:`, bodyLog);
         }
       }
     }

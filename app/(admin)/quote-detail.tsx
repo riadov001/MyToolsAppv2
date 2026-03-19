@@ -200,11 +200,24 @@ export default function QuoteDetailScreen() {
   const items: any[] = q.items || q.lineItems || q.lines || q.quote_items || [];
 
   const computedTotals = items.reduce((acc: { ht: number; ttc: number }, it: any) => {
-    const price = parseFloat(String(it.unitPrice ?? it.price ?? it.unitPriceExcludingTax ?? 0)) || 0;
+    const price = parseFloat(String(
+      it.unitPrice ?? 
+      it.price ?? 
+      it.unitPriceExcludingTax ?? 
+      it.priceExcludingTax ?? 
+      it.basePrice ?? 
+      it.hourlyRate ?? 
+      0
+    )) || 0;
     const qty = parseFloat(String(it.quantity ?? 1)) || 1;
-    const tax = parseFloat(String(it.taxRate ?? it.tvaRate ?? 0)) || 0;
+    const tax = parseFloat(String(it.taxRate ?? it.tvaRate ?? it.taxAmount ?? 0)) || 0;
+    
     const lineHT = it.totalExcludingTax ?? (qty * price);
-    const lineTTC = it.totalIncludingTax ?? it.totalPrice ?? (qty * price * (1 + tax / 100));
+    let lineTTC = it.totalIncludingTax ?? it.totalPrice ?? it.total ?? null;
+    if (!lineTTC) {
+      lineTTC = qty * price * (1 + tax / 100);
+    }
+    
     return { ht: acc.ht + (parseFloat(String(lineHT)) || 0), ttc: acc.ttc + (parseFloat(String(lineTTC)) || 0) };
   }, { ht: 0, ttc: 0 });
 
