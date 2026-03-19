@@ -111,14 +111,13 @@ export default function InvoiceCreateScreen() {
     if (q.clientId) setSelectedClientId(String(q.clientId));
     if (q.notes || q.description) setNotes(q.notes || q.description || "");
     const items: any[] = q.items || q.lineItems || [];
-    if (items.length > 0) {
-      setLineItems(items.map((it: any) => ({
-        description: it.description || it.name || "",
-        quantity: String(it.quantity || 1),
-        unitPrice: String(it.unitPrice || it.unitPriceExcludingTax || it.price || 0),
-        tvaRate: String(it.tvaRate || it.taxRate || it.vatRate || 20),
-      })));
-    }
+    const mappedItems = items.map((it: any) => ({
+      description: it.description || it.name || "",
+      quantity: String(it.quantity || 1),
+      unitPrice: String(it.unitPrice || it.unitPriceExcludingTax || it.price || 0),
+      tvaRate: String(it.tvaRate || it.taxRate || it.vatRate || 20),
+    }));
+    setLineItems(mappedItems.length > 0 ? mappedItems : [{ description: "", quantity: "1", unitPrice: "", tvaRate: "20" }]);
   };
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
@@ -536,12 +535,10 @@ export default function InvoiceCreateScreen() {
               <Text style={styles.lineTotalCalc}>Total TTC : {fmtEur(calcTTC(item))}</Text>
             </View>
           ))}
-          {!selectedQuoteId && (
-            <Pressable style={styles.addLineBtn} onPress={addLineItem}>
-              <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-              <Text style={styles.addLineBtnText}>Ajouter une prestation</Text>
-            </Pressable>
-          )}
+          <Pressable style={styles.addLineBtn} onPress={addLineItem}>
+            <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
+            <Text style={styles.addLineBtnText}>Ajouter une prestation</Text>
+          </Pressable>
         </View>
 
         {/* Récapitulatif */}
