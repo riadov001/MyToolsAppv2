@@ -116,12 +116,12 @@ export default function ReservationCreateScreen() {
       const scheduledDate = new Date(`${date}T${time}:00`);
       const payload: any = {
         clientId: selectedClientId,
+        serviceId: selectedServiceId || "",
         scheduledDate: scheduledDate.toISOString(),
         date: scheduledDate.toISOString(),
         status: "pending",
       };
       if (pickedQuoteId) payload.quoteId = pickedQuoteId;
-      if (selectedServiceId) payload.serviceId = selectedServiceId;
       if (serviceType) payload.serviceType = serviceType;
       if (notes) payload.notes = notes;
       return adminReservations.create(payload);

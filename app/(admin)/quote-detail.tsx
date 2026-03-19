@@ -91,7 +91,7 @@ export default function QuoteDetailScreen() {
 
   const invoiceMutation = useMutation({
     mutationFn: () => {
-      const quote = queryClient.getQueryData<any>(["admin-quote", id]);
+      const quote = q || queryClient.getQueryData<any>(["admin-quote", id]);
       const ttc = Number(quote?.quoteAmount || quote?.totalTTC || quote?.total || quote?.totalIncludingTax || quote?.amount || quote?.totalAmount || 0);
       const ht = Number(quote?.priceExcludingTax || quote?.totalHT || quote?.totalExcludingTax || quote?.subtotal || 0);
       const tva = Number(quote?.taxAmount || quote?.tvaAmount || quote?.taxTotal || 0);
