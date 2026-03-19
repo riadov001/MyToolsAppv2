@@ -178,8 +178,8 @@ server/
 - Reservation detail: "Refuser" button removed (only "Confirmer" remains for pending client action)
 
 ## App Review Mode
-- **Environment variable**: `APP_REVIEW_MODE=true` enables the reviewer demo account bypass
-- **Demo credentials**: `review@testapp.com` / `00000000` (admin role, 8 zéros)
+- **Environment variable**: `APP_REVIEW_MODE=true` enables the reviewer demo account bypass (auto-enabled in development)
+- **Demo credentials**: `review@mytools.eu` / `000000` (admin role)
 - All admin CRUD endpoints return synthetic data when using the reviewer token
 - Disable by removing or setting `APP_REVIEW_MODE=false` in production after review
 - See `APP_REVIEW_NOTES.md` for full reviewer instructions
@@ -276,3 +276,9 @@ Le fichier `.eas/workflows/build-and-submit.yml` déclenche automatiquement (pus
   - **Amount computation robustness**: Enhanced fallback logic to search multiple field name variants (unitPrice, price, priceExcludingTax, basePrice, hourlyRate, etc.) when computing totals from items[]
   - **JSON payloads**: Switched from FormData multipart to JSON payloads for quote/invoice creation; all monetary fields included (totalHT, totalTTC, amount, etc.)
   - **Data persistence**: All monetary data persists to backend via improved API payload structure
+- Mar 19 2026: **Invoice/Quote API payload cleanup**
+  - **Items sanitization**: Clean items array to only include spec fields: `description`, `quantity`, `unitPrice`, `tvaRate`
+  - **Numeric conversion**: Convert `quantity`, `unitPrice`, `tvaRate` in items and root `totalHT`, `totalTTC`, `tvaRate` to proper numbers (not strings)
+  - **Removed extra fields**: Strip `unitPriceExcludingTax`, `taxRate`, `totalPrice`, `totalIncludingTax`, `totalExcludingTax` from items
+  - **Review mode**: Auto-enable `APP_REVIEW_MODE` in development; reviewer credentials updated to `review@mytools.eu` / `000000`
+  - **Known issues**: External API returns empty quotes list; invoice creation still receives `toISOString` error from API (requires external API investigation)
