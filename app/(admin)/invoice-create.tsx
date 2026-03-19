@@ -79,9 +79,7 @@ export default function InvoiceCreateScreen() {
   const [dueDate, setDueDate] = useState(getDefaultDueDate());
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [showPaymentPicker, setShowPaymentPicker] = useState(false);
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: "", quantity: "1", unitPrice: "", tvaRate: "20" },
-  ]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   const { data: quotes = [], isLoading: quotesLoading } = useQuery({
     queryKey: ["admin-quotes"],

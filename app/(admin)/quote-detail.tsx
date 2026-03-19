@@ -416,16 +416,6 @@ export default function QuoteDetailScreen() {
                 <Text style={styles.actionBtnText}>Créer RDV</Text>
               </Pressable>
             </View>
-            <Pressable
-              style={styles.actionBtnSecondary}
-              onPress={() => router.push({
-                pathname: "/(admin)/invoice-create",
-                params: { clientId: q?.clientId, quoteId: id },
-              } as any)}
-            >
-              <Ionicons name="add-circle-outline" size={16} color={theme.primary} />
-              <Text style={styles.actionBtnSecondaryText}>Nouvelle facture manuelle</Text>
-            </Pressable>
           </View>
         ) : null}
 
