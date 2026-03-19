@@ -1350,13 +1350,25 @@ async function registerRoutes(app2) {
       };
       const path2 = req.url.replace(/\?.*$/, "");
       if ((path2.replace(/\/$/, "") === "/invoices" || path2.replace(/\/$/, "") === "/quotes") && req.method === "POST" && req.body) {
-        const ALLOWED_ITEM_FIELDS = ["description", "quantity", "unitPrice", "priceExcludingTax", "taxRate", "tvaRate"];
+        const fieldMap = {
+          "priceExcludingTax": "unit_price_excluding_tax",
+          "unitPrice": "unit_price",
+          "taxRate": "tax_rate",
+          "tvaRate": "tax_rate",
+          "quantity": "quantity",
+          "description": "description"
+        };
         if (Array.isArray(req.body.items)) {
           req.body.items = req.body.items.map((it) => {
             const clean = {};
-            for (const f of ALLOWED_ITEM_FIELDS) {
-              if (it[f] !== void 0) {
-                clean[f] = f === "quantity" ? typeof it[f] === "string" ? parseFloat(it[f]) : it[f] : String(it[f]);
+            for (const originalKey of Object.keys(fieldMap)) {
+              if (it[originalKey] !== void 0) {
+                const apiKey = fieldMap[originalKey];
+                if (originalKey === "quantity") {
+                  clean[apiKey] = typeof it[originalKey] === "string" ? parseFloat(it[originalKey]) : it[originalKey];
+                } else {
+                  clean[apiKey] = String(it[originalKey]);
+                }
               }
             }
             return clean;
@@ -1365,16 +1377,22 @@ async function registerRoutes(app2) {
         if (Array.isArray(req.body.lineItems)) {
           req.body.lineItems = req.body.lineItems.map((it) => {
             const clean = {};
-            for (const f of ALLOWED_ITEM_FIELDS) {
-              if (it[f] !== void 0) {
-                clean[f] = f === "quantity" ? typeof it[f] === "string" ? parseFloat(it[f]) : it[f] : String(it[f]);
+            for (const originalKey of Object.keys(fieldMap)) {
+              if (it[originalKey] !== void 0) {
+                const apiKey = fieldMap[originalKey];
+                if (originalKey === "quantity") {
+                  clean[apiKey] = typeof it[originalKey] === "string" ? parseFloat(it[originalKey]) : it[originalKey];
+                } else {
+                  clean[apiKey] = String(it[originalKey]);
+                }
               }
             }
             return clean;
           });
         }
-        if (typeof req.body.totalHT === "string") req.body.totalHT = req.body.totalHT;
-        if (typeof req.body.totalTTC === "string") req.body.totalTTC = req.body.totalTTC;
+        if (path2.replace(/\/$/, "") === "/quotes" && !req.body.serviceId) {
+          req.body.serviceId = "demo-s1";
+        }
         console.log(`[SANITIZE] ${path2} Cleaned body:`, JSON.stringify(req.body).substring(0, 500));
       }
       const { body, contentType } = buildBody();
