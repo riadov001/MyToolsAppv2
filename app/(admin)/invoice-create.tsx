@@ -11,7 +11,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { adminInvoices, adminClients, adminQuotes, adminServices } from "@/lib/admin-api";
+import { adminInvoices, adminClients, adminServices } from "@/lib/admin-api";
 import { useTheme } from "@/lib/theme";
 import { ThemeColors } from "@/constants/theme";
 import { useCustomAlert } from "@/components/CustomAlert";
@@ -80,17 +80,12 @@ function toDateOnly(iso: string): string {
 export default function InvoiceCreateScreen() {
   const params = useLocalSearchParams();
   const paramClientId = Array.isArray(params.clientId) ? params.clientId[0] : (params.clientId as string || "");
-  const paramQuoteId = Array.isArray(params.quoteId) ? params.quoteId[0] : (params.quoteId as string || "");
 
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
   const queryClient = useQueryClient();
   const { showAlert, AlertComponent } = useCustomAlert();
-
-  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(paramQuoteId || null);
-  const [showQuotePicker, setShowQuotePicker] = useState(false);
-  const [quoteSearch, setQuoteSearch] = useState("");
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(paramClientId || null);
   const [clientSearch, setClientSearch] = useState("");
@@ -103,47 +98,12 @@ export default function InvoiceCreateScreen() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [photos, setPhotos] = useState<{ uri: string; name: string }[]>([]);
 
-  const { data: quotes = [], isLoading: quotesLoading } = useQuery({
-    queryKey: ["admin-quotes"],
-    queryFn: adminQuotes.getAll,
-    staleTime: 2 * 60 * 1000,
-  });
-
   const { data: services = [] } = useQuery({
     queryKey: ["admin-services"],
     queryFn: adminServices.getAll,
     staleTime: 10 * 60 * 1000,
   });
 
-  const quotesArr = Array.isArray(quotes) ? quotes : [];
-  const filteredQuotes = quotesArr.filter((q: any) => {
-    if (!quoteSearch) return true;
-    const s = quoteSearch.toLowerCase();
-    const ref = (q.quoteNumber || q.reference || "").toLowerCase();
-    const cn = `${q.clientFirstName || ""} ${q.clientLastName || ""} ${q.clientName || ""}`.toLowerCase();
-    return ref.includes(s) || cn.includes(s);
-  });
-
-  const selectedQuote = quotesArr.find((q: any) => String(q.id) === String(selectedQuoteId));
-  const selectedQuoteLabel = selectedQuote
-    ? (selectedQuote.quoteNumber || selectedQuote.reference || `Devis #${selectedQuote.id}`)
-    : "Sélectionner un devis (optionnel)";
-
-  const applyQuote = (q: any) => {
-    setSelectedQuoteId(String(q.id));
-    setShowQuotePicker(false);
-    setQuoteSearch("");
-    if (q.clientId) setSelectedClientId(String(q.clientId));
-    if (q.notes || q.description) setNotes(q.notes || q.description || "");
-    const items: any[] = q.items || q.lineItems || [];
-    const mappedItems = items.map((it: any) => ({
-      description: it.description || it.name || "",
-      quantity: String(it.quantity || 1),
-      unitPrice: String(it.unitPrice || it.unitPriceExcludingTax || it.price || 0),
-      tvaRate: String(it.tvaRate || it.taxRate || it.vatRate || 20),
-    }));
-    setLineItems(mappedItems.length > 0 ? mappedItems : [{ description: "", quantity: "1", unitPrice: "", tvaRate: "20" }]);
-  };
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["admin-clients"],
@@ -238,8 +198,8 @@ export default function InvoiceCreateScreen() {
       return;
     }
 
-    if (!selectedQuoteId && photos.length === 0) {
-      showAlert({ type: "warning", title: "Attention", message: "Sans devis source, au moins une photo est obligatoire.", buttons: [{ text: "OK", style: "primary" }] });
+    if (photos.length === 0) {
+      showAlert({ type: "warning", title: "Attention", message: "Au moins une photo est obligatoire.", buttons: [{ text: "OK", style: "primary" }] });
       return;
     }
 
@@ -281,7 +241,6 @@ export default function InvoiceCreateScreen() {
       tvaRate: dominantTva,
     };
 
-    if (selectedQuoteId) payload.quoteId = selectedQuoteId;
     if (notes.trim()) payload.notes = notes.trim();
     if (dueDate) payload.dueDate = toDateOnly(dueDate);
     if (issueDate) payload.issueDate = toDateOnly(issueDate);
@@ -316,84 +275,6 @@ export default function InvoiceCreateScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Quote Picker */}
-        <View style={styles.section}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={styles.sectionTitle}>Devis source (optionnel)</Text>
-            {selectedQuote && (
-              <Pressable onPress={() => { setSelectedQuoteId(null); setLineItems([{ description: "", quantity: "1", unitPrice: "", tvaRate: "20" }]); setNotes(""); }}>
-                <Text style={{ fontSize: 11, color: theme.textTertiary, fontFamily: "Inter_400Regular" }}>Effacer</Text>
-              </Pressable>
-            )}
-          </View>
-          {selectedQuote ? (
-            <Pressable style={[styles.quoteSelected]} onPress={() => setShowQuotePicker(!showQuotePicker)}>
-              <View style={styles.quoteSelectedIcon}>
-                <Ionicons name="document-text" size={18} color={theme.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quoteSelectedRef}>{selectedQuote.quoteNumber || selectedQuote.reference || `Devis #${selectedQuote.id}`}</Text>
-                <Text style={styles.quoteSelectedSub} numberOfLines={1}>
-                  {`${selectedQuote.clientFirstName || ""} ${selectedQuote.clientLastName || ""}`.trim() || selectedQuote.clientName || ""}
-                  {selectedQuote.totalTTC ? ` · ${Number(selectedQuote.totalTTC).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}` : ""}
-                </Text>
-              </View>
-              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-            </Pressable>
-          ) : (
-            <Pressable style={styles.pickerBtn} onPress={() => setShowQuotePicker(!showQuotePicker)}>
-              <Text style={[styles.pickerText, { color: theme.textTertiary }]}>{selectedQuoteLabel}</Text>
-              <Ionicons name={showQuotePicker ? "chevron-up" : "chevron-down"} size={18} color={theme.textTertiary} />
-            </Pressable>
-          )}
-          {showQuotePicker && (
-            <View style={styles.clientDropdown}>
-              <View style={styles.clientSearch}>
-                <Ionicons name="search" size={15} color={theme.textTertiary} />
-                <TextInput
-                  style={styles.clientSearchInput}
-                  placeholder="Rechercher un devis..."
-                  placeholderTextColor={theme.textTertiary}
-                  value={quoteSearch}
-                  onChangeText={setQuoteSearch}
-                  autoCapitalize="none"
-                />
-              </View>
-              <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-                {quotesLoading ? (
-                  <ActivityIndicator size="small" color={theme.primary} style={{ padding: 12 }} />
-                ) : filteredQuotes.length === 0 ? (
-                  <Text style={styles.noClient}>Aucun devis trouvé</Text>
-                ) : (
-                  filteredQuotes.map((q: any) => {
-                    const clientName = `${q.clientFirstName || ""} ${q.clientLastName || ""}`.trim() || q.clientName || "";
-                    const ref = q.quoteNumber || q.reference || `Devis #${q.id}`;
-                    const amount = q.totalTTC ? Number(q.totalTTC).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "";
-                    return (
-                      <Pressable
-                        key={q.id}
-                        style={[styles.clientOption, String(selectedQuoteId) === String(q.id) && { backgroundColor: theme.primary + "20" }]}
-                        onPress={() => applyQuote(q)}
-                      >
-                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                          <Text style={[styles.clientOptionName, String(selectedQuoteId) === String(q.id) && { color: theme.primary }]}>{ref}</Text>
-                          {amount ? <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: theme.primary }}>{amount}</Text> : null}
-                        </View>
-                        {clientName ? <Text style={styles.clientOptionEmail}>{clientName}</Text> : null}
-                      </Pressable>
-                    );
-                  })
-                )}
-              </ScrollView>
-            </View>
-          )}
-          {!selectedQuote && (
-            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: theme.textTertiary, marginTop: 2 }}>
-              Sélectionnez un devis pour pré-remplir le client et les prestations automatiquement. Sans devis, une photo est obligatoire.
-            </Text>
-          )}
-        </View>
-
         {/* Client Picker */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Client *</Text>
@@ -513,8 +394,8 @@ export default function InvoiceCreateScreen() {
           />
         </View>
 
-        {/* Services présélectionnés (si pas de devis) */}
-        {!selectedQuoteId && servicesArr.length > 0 && (
+        {/* Services disponibles */}
+        {servicesArr.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Services disponibles</Text>
             <FlatList
@@ -548,9 +429,9 @@ export default function InvoiceCreateScreen() {
           </View>
         )}
 
-        {/* Photos (obligatoire si pas devis) */}
+        {/* Photos (obligatoire) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos {!selectedQuoteId ? "* (1 minimum)" : "(optionnel)"}</Text>
+          <Text style={styles.sectionTitle}>Photos * (1 minimum)</Text>
           {photos.length > 0 ? (
             <FlatList
               scrollEnabled={false}
@@ -593,36 +474,36 @@ export default function InvoiceCreateScreen() {
                 )}
               </View>
               <TextInput
-                style={[styles.input, selectedQuoteId && { color: theme.textSecondary }]}
+                style={styles.input}
                 placeholder="Description de la prestation"
                 placeholderTextColor={theme.textTertiary}
                 value={item.description}
-                onChangeText={v => !selectedQuoteId && updateLineItem(idx, "description", v)}
-                editable={!selectedQuoteId}
+                onChangeText={v => updateLineItem(idx, "description", v)}
+                editable
               />
               <View style={styles.lineItemRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Qté</Text>
                   <TextInput
-                    style={[styles.input, selectedQuoteId && { color: theme.textSecondary }]}
+                    style={styles.input}
                     placeholder="1"
                     placeholderTextColor={theme.textTertiary}
                     value={item.quantity}
-                    onChangeText={v => !selectedQuoteId && updateLineItem(idx, "quantity", v)}
+                    onChangeText={v => updateLineItem(idx, "quantity", v)}
                     keyboardType="decimal-pad"
-                    editable={!selectedQuoteId}
+                    editable
                   />
                 </View>
                 <View style={{ flex: 2 }}>
                   <Text style={styles.fieldLabel}>Prix HT (€)</Text>
                   <TextInput
-                    style={[styles.input, selectedQuoteId && { color: theme.textSecondary }]}
+                    style={styles.input}
                     placeholder="0.00"
                     placeholderTextColor={theme.textTertiary}
                     value={item.unitPrice}
-                    onChangeText={v => !selectedQuoteId && updateLineItem(idx, "unitPrice", v)}
+                    onChangeText={v => updateLineItem(idx, "unitPrice", v)}
                     keyboardType="decimal-pad"
-                    editable={!selectedQuoteId}
+                    editable
                   />
                 </View>
                 <View style={{ flex: 1.5 }}>
@@ -632,8 +513,7 @@ export default function InvoiceCreateScreen() {
                       <Pressable
                         key={t}
                         style={[styles.tvaBtn, item.tvaRate === t && { backgroundColor: theme.primary }]}
-                        onPress={() => !selectedQuoteId && updateLineItem(idx, "tvaRate", t)}
-                        disabled={!!selectedQuoteId}
+                        onPress={() => updateLineItem(idx, "tvaRate", t)}
                       >
                         <Text style={[styles.tvaBtnText, item.tvaRate === t && { color: "#fff" }]}>{t}%</Text>
                       </Pressable>
@@ -740,27 +620,6 @@ function getStyles(theme: ThemeColors) {
     clientOptionName: { fontSize: 14, fontFamily: "Inter_500Medium", color: theme.text },
     clientOptionEmail: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textTertiary },
     noClient: { paddingHorizontal: 12, paddingVertical: 12, color: theme.textTertiary },
-    quoteSelected: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      backgroundColor: theme.primary + "10",
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    quoteSelectedIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: theme.primary + "20",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    quoteSelectedRef: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: theme.primary },
-    quoteSelectedSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: theme.textTertiary, marginTop: 2 },
     input: {
       paddingHorizontal: 12,
       paddingVertical: 10,

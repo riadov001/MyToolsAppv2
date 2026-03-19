@@ -280,7 +280,7 @@ const getStyles = (theme: ThemeColors) => StyleSheet.create({
     backgroundColor: theme.surface, borderWidth: 1.5, borderColor: theme.border,
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,
   },
-  triggerText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: theme.text },
+  triggerText: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium", color: theme.primary },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
   sheet: {
     backgroundColor: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22,

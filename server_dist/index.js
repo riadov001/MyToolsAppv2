@@ -1332,6 +1332,25 @@ async function registerRoutes(app2) {
         if (ct.includes("multipart/form-data")) return { body: req.rawBody, contentType: ct };
         return { body: JSON.stringify(req.body), contentType: "application/json" };
       };
+      const path2 = req.url.replace(/\?.*$/, "");
+      if (path2.replace(/\/$/, "") === "/invoices" && req.method === "POST" && req.body) {
+        const DATE_FIELDS = ["dueDate", "issueDate", "validUntil", "createdAt", "updatedAt", "paidAt", "date"];
+        for (const f of DATE_FIELDS) {
+          if (req.body[f] && typeof req.body[f] === "string") {
+            try {
+              req.body[f] = new Date(req.body[f]).toISOString();
+            } catch {
+            }
+          }
+        }
+        const ALLOWED = ["clientId", "quoteId", "status", "totalHT", "totalTTC", "tvaRate", "issueDate", "dueDate", "paymentMethod", "notes", "items", "lineItems"];
+        const cleaned = {};
+        for (const k of ALLOWED) {
+          if (req.body[k] !== void 0) cleaned[k] = req.body[k];
+        }
+        req.body = cleaned;
+        console.log(`[INVOICE-SANITIZE] Cleaned body:`, JSON.stringify(req.body).substring(0, 500));
+      }
       const { body, contentType } = buildBody();
       if (contentType) authHeaders["content-type"] = contentType;
       const fetchOpts = { method: req.method, headers: authHeaders, redirect: "manual" };
