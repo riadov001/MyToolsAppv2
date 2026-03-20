@@ -1258,58 +1258,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const invoicePayload = {
+      // 2-step creation: create invoice shell first, then add items one by one
+      const invoiceShellPayload = {
         clientId,
         quoteId: id,
         status: "pending",
-        items: mappedItems,
-        lineItems: mappedItems,
+        amount: totalTTC.toFixed(2),
         total_excluding_tax: totalHT.toFixed(2),
         total_including_tax: totalTTC.toFixed(2),
         total: totalTTC.toFixed(2),
         priceExcludingTax: totalHT.toFixed(2),
-        amount: totalTTC.toFixed(2),
         taxAmount: (totalTTC - totalHT).toFixed(2),
         tax_amount: (totalTTC - totalHT).toFixed(2),
         issueDate: new Date().toISOString().split("T")[0],
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       };
 
-      const invoiceSegments = ["admin/invoices", "mobile/admin/invoices", "mobile/invoices"];
-      for (const seg of invoiceSegments) {
+      const invoiceCreateSegments = ["mobile/admin/invoices", "admin/invoices", "mobile/invoices"];
+      let createdInvoice: any = null;
+
+      for (const seg of invoiceCreateSegments) {
         try {
           const r = await fetch(`${EXTERNAL_API}/${seg}`, {
             method: "POST",
             headers: authHeaders,
             redirect: "manual",
-            body: JSON.stringify(invoicePayload),
+            body: JSON.stringify(invoiceShellPayload),
           });
           const txt = await r.text();
-          if (txt.includes("<!DOCTYPE") || txt.includes("<html")) {
-            console.log(`[ADMIN-CONVERT] ${seg} => HTML (auth failed)`);
-            continue;
-          }
+          if (txt.includes("<!DOCTYPE") || txt.includes("<html")) continue;
           const parsed = JSON.parse(txt);
           if (r.ok && parsed?.id) {
-            console.log(`[ADMIN-CONVERT] ✅ Invoice created via ${seg}, status ${r.status}`);
-            return res.status(201).json({
-              ...parsed,
-              quoteId: id,
-              clientId,
-              total_excluding_tax: totalHT.toFixed(2),
-              total_including_tax: totalTTC.toFixed(2),
-              priceExcludingTax: totalHT.toFixed(2),
-              amount: totalTTC.toFixed(2),
-              items: mappedItems,
-            });
+            console.log(`[ADMIN-CONVERT] ✅ Invoice shell created via ${seg}, id ${parsed.id}`);
+            createdInvoice = parsed;
+            break;
           }
-          console.log(`[ADMIN-CONVERT] ${seg} => ${r.status}`, parsed?.message || "");
+          console.log(`[ADMIN-CONVERT] ${seg} shell => ${r.status}`, parsed?.message || "");
         } catch (e) {
-          console.log(`[ADMIN-CONVERT] ${seg} => ${(e as any).message}`);
+          console.log(`[ADMIN-CONVERT] ${seg} shell => ${(e as any).message}`);
         }
       }
 
-      return res.status(400).json({ message: "Impossible de créer la facture." });
+      if (createdInvoice?.id && mappedItems.length > 0) {
+        // Add items one by one (2-step)
+        const itemSegments = ["mobile/admin/invoices", "admin/invoices"];
+        for (const item of mappedItems) {
+          const qty = item.quantity;
+          const price = parseFloat(item.unit_price_excluding_tax);
+          const tax = parseFloat(item.tax_rate);
+          const itemPayload = {
+            description: item.description,
+            quantity: String(qty),
+            unitPriceExcludingTax: String(price),
+            totalExcludingTax: String(qty * price),
+            taxRate: String(tax),
+            taxAmount: String(qty * price * (tax / 100)),
+            totalIncludingTax: String(qty * price * (1 + tax / 100)),
+          };
+          for (const seg of itemSegments) {
+            try {
+              const r = await fetch(`${EXTERNAL_API}/${seg}/${createdInvoice.id}/items`, {
+                method: "POST",
+                headers: authHeaders,
+                redirect: "manual",
+                body: JSON.stringify(itemPayload),
+              });
+              const txt = await r.text();
+              if (!txt.includes("<!DOCTYPE") && !txt.includes("<html")) {
+                const parsed = JSON.parse(txt);
+                if (r.ok && parsed?.id) {
+                  console.log(`[ADMIN-CONVERT] ✅ Item added to invoice ${createdInvoice.id} via ${seg}`);
+                  break;
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (createdInvoice?.id) {
+        return res.status(201).json({
+          ...createdInvoice,
+          quoteId: id,
+          clientId,
+          total_excluding_tax: totalHT.toFixed(2),
+          total_including_tax: totalTTC.toFixed(2),
+          priceExcludingTax: totalHT.toFixed(2),
+          amount: totalTTC.toFixed(2),
+          items: mappedItems,
+        });
+      }
+
+      return res.status(400).json({ message: "Impossible de créer la facture depuis ce devis." });
     } catch (err: any) {
       console.error(`[ADMIN-CONVERT] Error:`, err.message);
       return res.status(500).json({ message: "Erreur serveur lors de la conversion." });
