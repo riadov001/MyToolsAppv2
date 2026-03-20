@@ -292,7 +292,21 @@ export default function InvoiceCreateScreen() {
     });
 
     console.log("[INVOICE-CREATE] items:", mappedItems.length, "photos:", photos.length, "totalTTC:", totalTTC);
-    createMutation.mutate(formData as any);
+    
+    const payload = {
+      clientId: selectedClientId,
+      status: "pending",
+      items: JSON.stringify(mappedItems),
+      total_excluding_tax: totalHT.toFixed(2),
+      total_including_tax: totalTTC.toFixed(2),
+      amount: totalTTC.toFixed(2),
+      issueDate,
+      dueDate: dueDateStr,
+      notes: notes.trim() || null,
+      paymentMethod: paymentMethod || null,
+    };
+    
+    createMutation.mutate(payload);
   };
 
   return (

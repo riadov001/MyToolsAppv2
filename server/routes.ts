@@ -1788,7 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.use("/api/quotes", async (req: Request, res: Response, next: NextFunction) => {
-    return mobileCrudProxy(req, res, "mobile/quotes", ["mobile/admin/quotes", "admin/quotes"]);
+    return mobileCrudProxy(req, res, "mobile/quotes", ["admin/quotes", "mobile/admin/quotes"]);
   });
 
   app.get("/api/auth/me", async (req: Request, res: Response) => {
