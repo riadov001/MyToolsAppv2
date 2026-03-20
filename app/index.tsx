@@ -26,6 +26,8 @@ export default function IndexScreen() {
         if (isAuthenticated) {
           if (isAdminOrEmployee) {
             router.replace("/(admin)" as any);
+          } else {
+            router.replace("/(main)" as any);
           }
         } else {
           router.replace("/(auth)/login");

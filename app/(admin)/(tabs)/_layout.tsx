@@ -101,7 +101,7 @@ export default function AdminTabLayout() {
           },
           tabBarBackground: () =>
             isIOS ? (
-              <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
+              <BlurView intensity={100} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
             ) : isWeb ? (
               <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface }]} />
             ) : null,
