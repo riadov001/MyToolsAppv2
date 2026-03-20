@@ -217,6 +217,8 @@ export default function QuoteDetailScreen() {
 
   const computedTotals = items.reduce((acc: { ht: number; ttc: number }, it: any) => {
     const price = parseFloat(String(
+      it.unit_price ??
+      it.unit_price_excluding_tax ??
       it.unitPrice ?? 
       it.price ?? 
       it.unitPriceExcludingTax ?? 
@@ -226,10 +228,10 @@ export default function QuoteDetailScreen() {
       0
     )) || 0;
     const qty = parseFloat(String(it.quantity ?? 1)) || 1;
-    const tax = parseFloat(String(it.taxRate ?? it.tvaRate ?? it.taxAmount ?? 0)) || 0;
+    const tax = parseFloat(String(it.tax_rate ?? it.taxRate ?? it.tvaRate ?? it.taxAmount ?? 0)) || 0;
     
-    const lineHT = it.totalExcludingTax ?? (qty * price);
-    let lineTTC = it.totalIncludingTax ?? it.totalPrice ?? it.total ?? null;
+    const lineHT = it.total_excluding_tax ?? it.totalExcludingTax ?? (qty * price);
+    let lineTTC = it.total_including_tax ?? it.totalIncludingTax ?? it.totalPrice ?? it.total ?? null;
     if (!lineTTC) {
       lineTTC = qty * price * (1 + tax / 100);
     }
@@ -237,8 +239,8 @@ export default function QuoteDetailScreen() {
     return { ht: acc.ht + (parseFloat(String(lineHT)) || 0), ttc: acc.ttc + (parseFloat(String(lineTTC)) || 0) };
   }, { ht: 0, ttc: 0 });
 
-  const rawTotalHT = q.priceExcludingTax || q.totalHT || q.totalExcludingTax || q.subtotal || q.pricingTotals?.totalHT;
-  const rawTotalTTC = q.quoteAmount || q.totalTTC || q.total || q.totalIncludingTax || q.amount || q.totalAmount || q.pricingTotals?.totalTTC;
+  const rawTotalHT = q.total_excluding_tax || q.priceExcludingTax || q.totalHT || q.totalExcludingTax || q.subtotal || q.pricingTotals?.totalHT;
+  const rawTotalTTC = q.total_including_tax || q.quoteAmount || q.totalTTC || q.total || q.totalIncludingTax || q.amount || q.totalAmount || q.pricingTotals?.totalTTC;
 
   const totalHT = parseFloat(String(rawTotalHT)) || computedTotals.ht;
   const totalTTC = parseFloat(String(rawTotalTTC)) || computedTotals.ttc;

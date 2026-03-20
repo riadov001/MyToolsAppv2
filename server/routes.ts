@@ -1161,67 +1161,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const path = req.url.replace(/\?.*$/, "");
       if ((path.replace(/\/$/, "") === "/invoices" || path.replace(/\/$/, "") === "/quotes") && req.method === "POST" && req.body) {
-        const fieldMap: Record<string, string> = {
-          "priceExcludingTax": "unit_price_excluding_tax",
-          "unitPrice": "unit_price",
-          "taxRate": "tax_rate",
-          "tvaRate": "tax_rate",
-          "quantity": "quantity",
-          "description": "description",
-        };
-        // Map root-level amount fields
-        const rootAmountMap: Record<string, string> = {
-          "totalHT": "total_excluding_tax",
-          "totalTTC": "total",
-          "totalAmount": "total",
-          "amount": "total",
-          "tvaRate": "tax_rate",
-          "priceExcludingTax": "total_excluding_tax",
-        };
+        // Map root-level amount fields vers tous les formats possibles
+        const htVal = req.body.totalHT || req.body.priceExcludingTax || req.body.total_excluding_tax;
+        const ttcVal = req.body.totalTTC || req.body.quoteAmount || req.body.amount || req.body.total || req.body.total_including_tax;
+        const taxVal = req.body.tvaRate || req.body.taxRate || req.body.tax_rate;
         
-        for (const [src, dst] of Object.entries(rootAmountMap)) {
-          if (req.body[src] !== undefined && !req.body[dst]) {
-            req.body[dst] = req.body[src];
-          }
+        if (htVal) {
+          req.body.priceExcludingTax = htVal;
+          req.body.total_excluding_tax = htVal;
+        }
+        if (ttcVal) {
+          req.body.quoteAmount = ttcVal;
+          req.body.total = ttcVal;
+          req.body.total_including_tax = ttcVal;
+          req.body.amount = ttcVal;
+        }
+        if (taxVal) {
+          req.body.taxRate = taxVal;
+          req.body.tax_rate = taxVal;
         }
         
+        const normalizeItem = (it: any) => {
+          // Partir de l'objet original pour garder tous les champs existants
+          const clean: Record<string, any> = { ...it };
+          // Convertir camelCase → snake_case (priorité au snake_case déjà présent)
+          if (it.unitPrice !== undefined && !clean.unit_price) clean.unit_price = String(it.unitPrice);
+          if (it.unitPriceExcludingTax !== undefined && !clean.unit_price_excluding_tax) clean.unit_price_excluding_tax = String(it.unitPriceExcludingTax);
+          if (it.priceExcludingTax !== undefined && !clean.unit_price_excluding_tax) clean.unit_price_excluding_tax = String(it.priceExcludingTax);
+          if (it.taxRate !== undefined && !clean.tax_rate) clean.tax_rate = String(it.taxRate);
+          if (it.tvaRate !== undefined && !clean.tax_rate) clean.tax_rate = String(it.tvaRate);
+          if (it.totalExcludingTax !== undefined && !clean.total_excluding_tax) clean.total_excluding_tax = String(it.totalExcludingTax);
+          if (it.totalIncludingTax !== undefined && !clean.total_including_tax) clean.total_including_tax = String(it.totalIncludingTax);
+          // Garantir que unit_price et unit_price_excluding_tax sont toujours présents
+          const price = clean.unit_price || clean.unit_price_excluding_tax;
+          if (price) {
+            clean.unit_price = String(price);
+            clean.unit_price_excluding_tax = String(price);
+          }
+          // Garantir quantity en nombre
+          if (clean.quantity !== undefined) clean.quantity = typeof clean.quantity === "string" ? parseFloat(clean.quantity) : clean.quantity;
+          return clean;
+        };
         if (Array.isArray(req.body.items)) {
-          req.body.items = req.body.items.map((it: any) => {
-            const clean: Record<string, any> = {};
-            for (const originalKey of Object.keys(fieldMap)) {
-              if (it[originalKey] !== undefined) {
-                const apiKey = fieldMap[originalKey];
-                if (originalKey === "quantity") {
-                  clean[apiKey] = typeof it[originalKey] === "string" ? parseFloat(it[originalKey]) : it[originalKey];
-                } else {
-                  clean[apiKey] = String(it[originalKey]);
-                }
-              }
-            }
-            if (clean.unit_price && !clean.unit_price_excluding_tax) {
-              clean.unit_price_excluding_tax = clean.unit_price;
-            }
-            return clean;
-          });
+          req.body.items = req.body.items.map(normalizeItem);
         }
         if (Array.isArray(req.body.lineItems)) {
-          req.body.lineItems = req.body.lineItems.map((it: any) => {
-            const clean: Record<string, any> = {};
-            for (const originalKey of Object.keys(fieldMap)) {
-              if (it[originalKey] !== undefined) {
-                const apiKey = fieldMap[originalKey];
-                if (originalKey === "quantity") {
-                  clean[apiKey] = typeof it[originalKey] === "string" ? parseFloat(it[originalKey]) : it[originalKey];
-                } else {
-                  clean[apiKey] = String(it[originalKey]);
-                }
-              }
-            }
-            if (clean.unit_price && !clean.unit_price_excluding_tax) {
-              clean.unit_price_excluding_tax = clean.unit_price;
-            }
-            return clean;
-          });
+          req.body.lineItems = req.body.lineItems.map(normalizeItem);
+        }
+        // Toujours dupliquer items dans lineItems et vice versa
+        if (Array.isArray(req.body.items) && !Array.isArray(req.body.lineItems)) {
+          req.body.lineItems = req.body.items;
+        }
+        if (Array.isArray(req.body.lineItems) && !Array.isArray(req.body.items)) {
+          req.body.items = req.body.lineItems;
         }
         console.log(`[SANITIZE] ${path} Full body:`, JSON.stringify(req.body).substring(0, 800));
       }
@@ -1452,19 +1444,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mappedItems = items.map((it: any) => {
-        const price = parseFloat(String(it.unitPrice || it.price || it.unitPriceExcludingTax || it.priceExcludingTax || 0)) || 0;
+        const price = parseFloat(String(it.unit_price || it.unit_price_excluding_tax || it.unitPrice || it.price || it.unitPriceExcludingTax || it.priceExcludingTax || 0)) || 0;
         const qty = parseFloat(String(it.quantity || 1)) || 1;
-        const tax = parseFloat(String(it.taxRate || it.tvaRate || 0)) || 0;
+        const tax = parseFloat(String(it.tax_rate || it.taxRate || it.tvaRate || 0)) || 0;
         return {
           description: it.description || it.name || "Prestation",
           quantity: qty,
-          unitPrice: price,
-          unitPriceExcludingTax: price,
-          taxRate: tax,
-          tvaRate: tax,
-          totalExcludingTax: qty * price,
-          totalIncludingTax: qty * price * (1 + tax / 100),
-          totalPrice: qty * price * (1 + tax / 100),
+          unit_price: String(price),
+          unit_price_excluding_tax: String(price),
+          tax_rate: String(tax),
+          total_excluding_tax: String(qty * price),
+          total_including_tax: String(qty * price * (1 + tax / 100)),
         };
       });
 
@@ -1474,14 +1464,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
         items: mappedItems,
         lineItems: mappedItems,
-        totalHT: totalHT.toFixed(2),
-        totalTTC: totalTTC.toFixed(2),
-        totalAmount: totalTTC.toFixed(2),
-        amount: totalTTC.toFixed(2),
+        total_excluding_tax: totalHT.toFixed(2),
+        total_including_tax: totalTTC.toFixed(2),
         total: totalTTC.toFixed(2),
         priceExcludingTax: totalHT.toFixed(2),
-        totalExcludingTax: totalHT.toFixed(2),
+        amount: totalTTC.toFixed(2),
         taxAmount: (totalTTC - totalHT).toFixed(2),
+        tax_amount: (totalTTC - totalHT).toFixed(2),
+        issueDate: new Date().toISOString().split("T")[0],
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       };
 
       const invoiceSegments = ["mobile/admin/invoices", "admin/invoices", "mobile/invoices"];

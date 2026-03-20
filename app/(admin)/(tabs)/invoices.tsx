@@ -111,7 +111,7 @@ export default function AdminInvoicesScreen() {
     const statusKey = (item.status || "").toLowerCase();
     const color = STATUS_COLORS[statusKey] || theme.textTertiary;
     const { name, email, phone } = resolveClient(item, clientMap);
-    const totalTTC = item.amount ?? item.totalTTC ?? item.total ?? item.totalAmount ?? null;
+    const totalTTC = item.amount ?? item.totalTTC ?? item.total ?? item.total_including_tax ?? item.totalAmount ?? null;
     return (
       <Pressable
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}

@@ -132,10 +132,12 @@ export default function AdminQuotesScreen() {
     const serviceSummary = lineItems.length > 0
       ? lineItems.slice(0, 2).map((it: any) => it.description || it.name || "").filter(Boolean).join(" · ")
       : "";
-    const directAmount = item.quoteAmount ?? item.amount ?? item.totalTTC ?? item.total ?? item.totalAmount ?? item.pricingTotals?.totalTTC ?? null;
+    const directAmount = item.quoteAmount ?? item.amount ?? item.totalTTC ?? item.total ?? item.total_including_tax ?? item.totalAmount ?? item.pricingTotals?.totalTTC ?? null;
     const computedFromItems = lineItems.length > 0
       ? lineItems.reduce((sum: number, it: any) => {
           const price = parseFloat(String(
+            it.unit_price ??
+            it.unit_price_excluding_tax ??
             it.unitPrice ?? 
             it.price ?? 
             it.unitPriceExcludingTax ?? 
@@ -145,9 +147,9 @@ export default function AdminQuotesScreen() {
             0
           )) || 0;
           const qty = parseFloat(String(it.quantity ?? 1)) || 1;
-          const tax = parseFloat(String(it.taxRate ?? it.tvaRate ?? it.taxAmount ?? 0)) || 0;
+          const tax = parseFloat(String(it.tax_rate ?? it.taxRate ?? it.tvaRate ?? it.taxAmount ?? 0)) || 0;
           
-          let lineTotal = it.totalIncludingTax ?? it.totalPrice ?? it.total ?? null;
+          let lineTotal = it.total_including_tax ?? it.totalIncludingTax ?? it.totalPrice ?? it.total ?? null;
           if (!lineTotal) {
             lineTotal = qty * price * (1 + tax / 100);
           }

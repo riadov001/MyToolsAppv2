@@ -149,9 +149,9 @@ export default function InvoiceDetailScreen() {
   const statusLabel = STATUS_LABELS[statusKey] || inv.status;
 
   const items: any[] = inv.items || inv.lineItems || inv.lines || inv.invoice_lines || [];
-  const totalHT = inv.priceExcludingTax || inv.totalHT || inv.totalExcludingTax || inv.subtotal || "";
-  const totalTVA = inv.taxAmount || inv.tvaAmount || inv.taxTotal || "";
-  const totalTTC = inv.amount || inv.totalTTC || inv.total || inv.totalIncludingTax || "";
+  const totalHT = inv.total_excluding_tax || inv.priceExcludingTax || inv.totalHT || inv.totalExcludingTax || inv.subtotal || "";
+  const totalTVA = inv.taxAmount || inv.vat_amount || inv.tvaAmount || inv.taxTotal || "";
+  const totalTTC = inv.total_including_tax || inv.amount || inv.totalTTC || inv.total || inv.totalIncludingTax || "";
   const pdfUrl = inv.pdfUrl || inv.pdf_url || inv.documentUrl;
 
   const { name, email, phone } = resolveClient(inv, clientMap);
@@ -245,9 +245,9 @@ export default function InvoiceDetailScreen() {
             <Text style={styles.sectionTitle}>Prestations</Text>
             {items.map((it: any, i: number) => {
               const qty = it.quantity ?? 1;
-              const unitHT = it.unitPriceExcludingTax ?? it.unitPrice ?? it.price ?? 0;
-              const tva = it.taxRate ?? it.tvaRate ?? 0;
-              const lineTotal = it.totalIncludingTax ?? it.totalPrice ?? (parseFloat(String(unitHT)) * parseFloat(String(qty)) * (1 + parseFloat(String(tva)) / 100));
+              const unitHT = it.unit_price_excluding_tax ?? it.unit_price ?? it.unitPriceExcludingTax ?? it.unitPrice ?? it.price ?? 0;
+              const tva = it.tax_rate ?? it.taxRate ?? it.tvaRate ?? 0;
+              const lineTotal = it.total_including_tax ?? it.totalIncludingTax ?? it.totalPrice ?? (parseFloat(String(unitHT)) * parseFloat(String(qty)) * (1 + parseFloat(String(tva)) / 100));
               return (
                 <View key={i} style={[styles.lineItem, i > 0 && { borderTopWidth: 1, borderTopColor: theme.border }]}>
                   <Text style={styles.lineDesc}>{it.description || it.name || `Ligne ${i + 1}`}</Text>
