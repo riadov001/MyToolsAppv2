@@ -2,7 +2,8 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import pg from "pg";
 
-const EXTERNAL_API = (process.env.EXTERNAL_API_URL || "https://stoath-my-tools-pwa-v-10-prod-saas-pafinv-v-19--Stpathh.replit.app/api").replace(/\/$/, "");
+const EXTERNAL_API = "https://my-tools-pwa-v-322-pafinv.replit.app/api";
+console.log(`[CONFIG] External API: ${EXTERNAL_API}`);
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -168,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Non authentifié" });
     }
     try {
-      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/auth/me`, {
+      const meRes = await fetch(`${EXTERNAL_API}/mobile/auth/me`, {
         headers: { "authorization": auth, "accept": "application/json" },
       });
       if (!meRes.ok) return res.status(401).json({ message: "Token invalide" });
@@ -211,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Non authentifié" });
     }
     try {
-      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/auth/me`, {
+      const meRes = await fetch(`${EXTERNAL_API}/mobile/auth/me`, {
         headers: { "authorization": auth, "accept": "application/json" },
       });
       if (!meRes.ok) return res.status(401).json({ message: "Token invalide" });
@@ -358,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const headers = getAuthHeaders(req);
       let userEmail = "";
       try {
-        const userRes = await fetch(`${EXTERNAL_API}/auth/user`, { method: "GET", headers, redirect: "manual" });
+        const userRes = await fetch(`${EXTERNAL_API}/mobile/auth/me`, { method: "GET", headers, redirect: "manual" });
         if (userRes.ok) {
           const userData = await userRes.json() as any;
           userEmail = userData?.email || userData?.user?.email || "";
@@ -441,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers["authorization"] = req.headers["authorization"] as string;
       }
 
-      const userRes = await fetch(`${EXTERNAL_API}/auth/user`, {
+      const userRes = await fetch(`${EXTERNAL_API}/mobile/auth/me`, {
         method: "GET",
         headers,
         redirect: "manual",
@@ -523,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const targetUrl = `${EXTERNAL_API}/login`;
+      const targetUrl = `${EXTERNAL_API}/mobile/auth/login`;
       const headers: Record<string, string> = {
         "host": new URL(EXTERNAL_API).host,
         "content-type": "application/json",
@@ -1627,6 +1628,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use("/api/quotes", async (req: Request, res: Response, next: NextFunction) => {
     return mobileCrudProxy(req, res, "mobile/quotes", ["mobile/admin/quotes", "admin/quotes"]);
+  });
+
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    const headers: Record<string, string> = {
+      "host": new URL(EXTERNAL_API).host,
+      "accept": "application/json",
+      "x-requested-with": "XMLHttpRequest",
+    };
+    if (req.headers["authorization"]) headers["authorization"] = req.headers["authorization"] as string;
+    if (req.headers["cookie"]) headers["cookie"] = req.headers["cookie"] as string;
+    try {
+      const r = await fetch(`${EXTERNAL_API}/mobile/auth/me`, { headers, redirect: "manual" });
+      const text = await r.text();
+      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+      try { return res.status(r.status).json(JSON.parse(text)); }
+      catch { return res.status(r.status).send(text); }
+    } catch (err: any) {
+      return res.status(502).json({ message: "Erreur de connexion" });
+    }
+  });
+
+  app.post("/api/refresh", async (req: Request, res: Response) => {
+    const headers: Record<string, string> = {
+      "host": new URL(EXTERNAL_API).host,
+      "content-type": "application/json",
+      "accept": "application/json",
+    };
+    if (req.headers["authorization"]) headers["authorization"] = req.headers["authorization"] as string;
+    if (req.headers["cookie"]) headers["cookie"] = req.headers["cookie"] as string;
+    try {
+      const r = await fetch(`${EXTERNAL_API}/mobile/refresh-token`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(req.body),
+        redirect: "manual",
+      });
+      const text = await r.text();
+      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+        return res.status(401).json({ message: "Session expirée" });
+      }
+      try { return res.status(r.status).json(JSON.parse(text)); }
+      catch { return res.status(r.status).send(text); }
+    } catch (err: any) {
+      return res.status(502).json({ message: "Erreur de connexion" });
+    }
   });
 
   app.use("/api", async (req: Request, res: Response, next: NextFunction) => {

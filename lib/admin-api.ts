@@ -20,7 +20,7 @@ const getApiBase = () => {
   if (process.env.EXPO_PUBLIC_DOMAIN) {
     return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
   }
-  return "https://stoath-my-tools-pwa-v-10-prod-saas-pafinv-v-19--Stpathh.replit.app";
+  return "https://my-tools-pwa-v-322-pafinv.replit.app";
 };
 
 const API_BASE = getApiBase();
