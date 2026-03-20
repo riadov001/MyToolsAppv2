@@ -114,7 +114,38 @@ export default function InvoiceCreateScreen() {
   const servicesArr = Array.isArray(services) ? services : [];
 
   const createMutation = useMutation({
-    mutationFn: (payload: any) => adminInvoices.create(payload),
+    mutationFn: async (payload: any) => {
+      console.log("[INVOICE-CREATE-2STEP] Creating invoice shell...");
+      const invoiceShell = await adminInvoices.create({
+        clientId: payload.clientId,
+        status: payload.status,
+        total_excluding_tax: payload.total_excluding_tax,
+        total_including_tax: payload.total_including_tax,
+        amount: payload.amount,
+        issueDate: payload.issueDate,
+        dueDate: payload.dueDate,
+        notes: payload.notes,
+        paymentMethod: payload.paymentMethod,
+      });
+      
+      if (!invoiceShell?.id) throw new Error("Invoice creation failed: no ID returned");
+      
+      const validItems = JSON.parse(payload.items || "[]");
+      for (const item of validItems) {
+        console.log("[INVOICE-CREATE-2STEP] Adding item:", item.description);
+        await adminInvoices.addItem(invoiceShell.id, {
+          description: item.description,
+          quantity: String(item.quantity),
+          unitPriceExcludingTax: item.unit_price_excluding_tax,
+          totalExcludingTax: String(parseFloat(item.unit_price_excluding_tax) * item.quantity),
+          taxRate: item.tax_rate,
+          taxAmount: String(parseFloat(item.unit_price_excluding_tax) * item.quantity * (parseFloat(item.tax_rate) / 100)),
+          totalIncludingTax: String(parseFloat(item.unit_price_excluding_tax) * item.quantity * (1 + parseFloat(item.tax_rate) / 100)),
+        });
+      }
+      
+      return invoiceShell;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });

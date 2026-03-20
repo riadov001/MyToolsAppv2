@@ -1407,19 +1407,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminUrl = `${EXTERNAL_API}/admin${req.url}`;
       const mobileUrl = `${EXTERNAL_API}/mobile/admin${req.url}`;
 
-      // Toujours essayer /mobile/admin/ en premier, puis /admin/ en fallback
-      let result = await tryUrl(mobileUrl);
+      // Toujours essayer /admin/ en premier, puis /mobile/admin/ en fallback
+      let result = await tryUrl(adminUrl);
 
       if (!result) {
-        result = await tryUrl(adminUrl);
-        if (result) console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status} (legacy fallback)`);
+        result = await tryUrl(mobileUrl);
+        if (result) console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${result.status} (mobile fallback)`);
       } else {
-        console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${result.status}`);
-        // Si la route mobile retourne une erreur 4xx, tenter /admin/ comme fallback
+        console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status}`);
+        // Si la route admin retourne une erreur 4xx, tenter /mobile/admin/ comme fallback
         if (result.status >= 400) {
-          const fallback = await tryUrl(adminUrl);
+          const fallback = await tryUrl(mobileUrl);
           if (fallback && fallback.status < result.status) {
-            console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${fallback.status} (admin fallback, better than ${result.status})`);
+            console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${fallback.status} (mobile fallback, better than ${result.status})`);
             result = fallback;
           }
         }
@@ -1626,11 +1626,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   app.use("/api/invoices", async (req: Request, res: Response, next: NextFunction) => {
-    return mobileCrudProxy(req, res, "mobile/invoices", ["mobile/admin/invoices", "admin/invoices"]);
+    return mobileCrudProxy(req, res, "mobile/invoices", ["admin/invoices", "mobile/admin/invoices"]);
   });
 
   app.use("/api/reservations", async (req: Request, res: Response, next: NextFunction) => {
-    return mobileCrudProxy(req, res, "mobile/reservations", ["mobile/admin/reservations", "admin/reservations"]);
+    return mobileCrudProxy(req, res, "mobile/reservations", ["admin/reservations", "mobile/admin/reservations"]);
   });
 
   app.post("/api/quotes/:id/convert-to-invoice", async (req: Request, res: Response) => {

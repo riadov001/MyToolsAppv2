@@ -91,7 +91,14 @@ export default function QuoteDetailScreen() {
   });
 
   const invoiceMutation = useMutation({
-    mutationFn: () => adminQuotes.convertToInvoice(id),
+    mutationFn: async () => {
+      try {
+        return await adminQuotes.convertToInvoice(id);
+      } catch (primaryErr: any) {
+        console.log("[QUOTE-INVOICE] Primary endpoint failed, trying direct invoices endpoint:", primaryErr?.message);
+        return await adminQuotes.convertToInvoiceDirect(id);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });
