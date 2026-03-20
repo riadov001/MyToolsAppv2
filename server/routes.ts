@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Non authentifié" });
     }
     try {
-      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/mobile/auth/me`, {
+      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/auth/me`, {
         headers: { "authorization": auth, "accept": "application/json" },
       });
       if (!meRes.ok) return res.status(401).json({ message: "Token invalide" });
@@ -211,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Non authentifié" });
     }
     try {
-      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/mobile/auth/me`, {
+      const meRes = await fetch(`${EXTERNAL_API.replace(/\/api$/, "")}/api/auth/me`, {
         headers: { "authorization": auth, "accept": "application/json" },
       });
       if (!meRes.ok) return res.status(401).json({ message: "Token invalide" });
@@ -670,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/mobile/quotes/:id/pdf", async (req: Request, res: Response) => {
+  app.get("/api/quotes/:id/pdf", async (req: Request, res: Response) => {
     const { id } = req.params;
     const authHeaders = getAuthHeaders(req);
     const attempts = [
@@ -711,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.json({ url: `${EXTERNAL_API}/public/quotes/${id}/pdf` });
   });
 
-  app.get("/api/mobile/invoices/:id/pdf", async (req: Request, res: Response) => {
+  app.get("/api/invoices/:id/pdf", async (req: Request, res: Response) => {
     const { id } = req.params;
     const authHeaders = getAuthHeaders(req);
     const attempts = [
@@ -752,7 +752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.json({ url: `${EXTERNAL_API}/public/invoices/${id}/pdf` });
   });
 
-  app.get("/api/mobile/admin/reservations/:id/services", async (req: Request, res: Response) => {
+  app.get("/api/admin/reservations/:id/services", async (req: Request, res: Response) => {
     const { id } = req.params;
     const authHeaders = getAuthHeaders(req);
     const attempts = [
@@ -1154,7 +1154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.use("/api/mobile/admin", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/admin", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authHeaders: Record<string, string> = {
         "host": new URL(EXTERNAL_API).host,
@@ -1463,15 +1463,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch { return res.status(result.status).send(result.text); }
   }
 
-  app.use("/api/mobile/invoices", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/invoices", async (req: Request, res: Response, next: NextFunction) => {
     return mobileCrudProxy(req, res, "mobile/invoices", ["mobile/admin/invoices", "admin/invoices"]);
   });
 
-  app.use("/api/mobile/reservations", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/reservations", async (req: Request, res: Response, next: NextFunction) => {
     return mobileCrudProxy(req, res, "mobile/reservations", ["mobile/admin/reservations", "admin/reservations"]);
   });
 
-  app.post("/api/mobile/quotes/:id/convert-to-invoice", async (req: Request, res: Response) => {
+  app.post("/api/quotes/:id/convert-to-invoice", async (req: Request, res: Response) => {
     const { id } = req.params;
     console.log(`[CONVERT-INVOICE] Converting quote ${id} to invoice`);
     
@@ -1625,7 +1625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.use("/api/mobile/quotes", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("/api/quotes", async (req: Request, res: Response, next: NextFunction) => {
     return mobileCrudProxy(req, res, "mobile/quotes", ["mobile/admin/quotes", "admin/quotes"]);
   });
 

@@ -113,7 +113,7 @@ export default function InvoiceDetailScreen() {
       if (pdfUrl) {
         await Linking.openURL(pdfUrl);
       } else {
-        await Linking.openURL(`${adminApiBase}/api/mobile/invoices/${id}/pdf`);
+        await Linking.openURL(`${adminApiBase}/api/invoices/${id}/pdf`);
       }
     } catch {
       showAlert({ type: "error", title: "PDF indisponible", message: "Le PDF n'est pas encore disponible pour cette facture.", buttons: [{ text: "OK" }] });

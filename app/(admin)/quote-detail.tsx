@@ -163,7 +163,7 @@ export default function QuoteDetailScreen() {
       if (pdfUrl) {
         await Linking.openURL(pdfUrl);
       } else {
-        const proxyUrl = `${adminApiBase}/api/mobile/quotes/${id}/pdf`;
+        const proxyUrl = `${adminApiBase}/api/quotes/${id}/pdf`;
         await Linking.openURL(proxyUrl);
       }
     } catch {

@@ -166,7 +166,7 @@ export async function adminApiCall<T = any>(
 async function tryRefreshToken(): Promise<boolean> {
   if (!refreshTokenValue) return false;
   try {
-    const res = await fetchWithRetry(`${API_BASE}/api/mobile/refresh`, {
+    const res = await fetchWithRetry(`${API_BASE}/api/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ refreshToken: refreshTokenValue }),
@@ -211,7 +211,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 }
 
 export async function adminLogin(email: string, password: string) {
-  const res = await fetchWithRetry(`${API_BASE}/api/mobile/login`, {
+  const res = await fetchWithRetry(`${API_BASE}/api/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -242,7 +242,7 @@ export async function adminLogin(email: string, password: string) {
   if (!user?.id && !user?.email) {
     if (data.accessToken) {
       try {
-        const meRes = await fetchWithRetry(`${API_BASE}/api/mobile/auth/me`, {
+        const meRes = await fetchWithRetry(`${API_BASE}/api/auth/me`, {
           headers: { Authorization: `Bearer ${data.accessToken}`, Accept: "application/json" },
         });
         if (meRes.ok) user = await meRes.json();
@@ -268,7 +268,7 @@ export async function adminLogin(email: string, password: string) {
 export async function adminGetMe(): Promise<any> {
   if (!accessToken) return null;
   try {
-    const res = await fetchWithRetry(`${API_BASE}/api/mobile/auth/me`, {
+    const res = await fetchWithRetry(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
     });
     if (res.ok) return await res.json();
@@ -277,61 +277,61 @@ export async function adminGetMe(): Promise<any> {
 }
 
 export const adminAnalytics = {
-  get: () => adminApiCall<any>("/api/mobile/admin/analytics"),
-  getAdvanced: () => adminApiCall<any>("/api/mobile/admin/advanced-analytics"),
+  get: () => adminApiCall<any>("/api/admin/analytics"),
+  getAdvanced: () => adminApiCall<any>("/api/admin/advanced-analytics"),
 };
 
 export const adminQuotes = {
-  getAll: () => adminApiCall<any[]>("/api/mobile/admin/quotes"),
-  getById: (id: string) => adminApiCall<any>(`/api/mobile/admin/quotes/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/mobile/admin/quotes", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/mobile/quotes/${id}`, { method: "PATCH", body: data }),
-  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/mobile/admin/quotes/${id}/status`, { method: "PATCH", body: { status } }),
-  delete: (id: string) => adminApiCall<any>(`/api/mobile/quotes/${id}`, { method: "DELETE" }),
-  convertToInvoice: (id: string, data?: any) => adminApiCall<any>(`/api/mobile/quotes/${id}/convert-to-invoice`, { method: "POST", body: data }),
-  createReservationFromQuote: (id: string, data: any) => adminApiCall<any>(`/api/mobile/quotes/${id}/create-reservation`, { method: "POST", body: data }),
-  getPdf: (id: string) => adminApiCall<any>(`/api/mobile/quotes/${id}/pdf`),
+  getAll: () => adminApiCall<any[]>("/api/admin/quotes"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/quotes/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/quotes", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/quotes/${id}`, { method: "PATCH", body: data }),
+  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/admin/quotes/${id}/status`, { method: "PATCH", body: { status } }),
+  delete: (id: string) => adminApiCall<any>(`/api/quotes/${id}`, { method: "DELETE" }),
+  convertToInvoice: (id: string, data?: any) => adminApiCall<any>(`/api/quotes/${id}/convert-to-invoice`, { method: "POST", body: data }),
+  createReservationFromQuote: (id: string, data: any) => adminApiCall<any>(`/api/quotes/${id}/create-reservation`, { method: "POST", body: data }),
+  getPdf: (id: string) => adminApiCall<any>(`/api/quotes/${id}/pdf`),
 };
 
 export const adminInvoices = {
-  getAll: () => adminApiCall<any[]>("/api/mobile/admin/invoices"),
-  getById: (id: string) => adminApiCall<any>(`/api/mobile/admin/invoices/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/mobile/admin/invoices", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/mobile/invoices/${id}`, { method: "PATCH", body: data }),
-  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/mobile/admin/invoices/${id}/status`, { method: "PATCH", body: { status } }),
-  delete: (id: string) => adminApiCall<any>(`/api/mobile/invoices/${id}`, { method: "DELETE" }),
-  getPdf: (id: string) => adminApiCall<any>(`/api/mobile/invoices/${id}/pdf`),
+  getAll: () => adminApiCall<any[]>("/api/admin/invoices"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/invoices/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/invoices", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/invoices/${id}`, { method: "PATCH", body: data }),
+  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/admin/invoices/${id}/status`, { method: "PATCH", body: { status } }),
+  delete: (id: string) => adminApiCall<any>(`/api/invoices/${id}`, { method: "DELETE" }),
+  getPdf: (id: string) => adminApiCall<any>(`/api/invoices/${id}/pdf`),
 };
 
 export const adminReservations = {
-  getAll: () => adminApiCall<any[]>("/api/mobile/admin/reservations"),
-  getById: (id: string) => adminApiCall<any>(`/api/mobile/admin/reservations/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/mobile/admin/reservations", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/mobile/admin/reservations/${id}`, { method: "PATCH", body: data }),
-  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/mobile/admin/reservations/${id}/status`, { method: "PATCH", body: { status } }),
-  delete: (id: string) => adminApiCall<any>(`/api/mobile/admin/reservations/${id}`, { method: "DELETE" }),
-  getServices: (id: string) => adminApiCall<any[]>(`/api/mobile/admin/reservations/${id}/services`),
+  getAll: () => adminApiCall<any[]>("/api/admin/reservations"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/reservations/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/reservations", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/admin/reservations/${id}`, { method: "PATCH", body: data }),
+  updateStatus: (id: string, status: string) => adminApiCall<any>(`/api/admin/reservations/${id}/status`, { method: "PATCH", body: { status } }),
+  delete: (id: string) => adminApiCall<any>(`/api/admin/reservations/${id}`, { method: "DELETE" }),
+  getServices: (id: string) => adminApiCall<any[]>(`/api/admin/reservations/${id}/services`),
 };
 
 export const adminClients = {
-  getAll: () => adminApiCall<any[]>("/api/mobile/admin/users"),
-  getById: (id: string) => adminApiCall<any>(`/api/mobile/admin/users/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/mobile/admin/users", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/mobile/admin/users/${id}`, { method: "PATCH", body: data }),
-  delete: (id: string) => adminApiCall<any>(`/api/mobile/admin/users/${id}`, { method: "DELETE" }),
+  getAll: () => adminApiCall<any[]>("/api/admin/users"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/users/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/users", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/admin/users/${id}`, { method: "PATCH", body: data }),
+  delete: (id: string) => adminApiCall<any>(`/api/admin/users/${id}`, { method: "DELETE" }),
 };
 
 export const adminServices = {
-  getAll: () => adminApiCall<any[]>("/api/mobile/admin/services"),
-  getById: (id: string) => adminApiCall<any>(`/api/mobile/admin/services/${id}`),
-  create: (data: any) => adminApiCall<any>("/api/mobile/admin/services", { method: "POST", body: data }),
-  update: (id: string, data: any) => adminApiCall<any>(`/api/mobile/admin/services/${id}`, { method: "PATCH", body: data }),
-  delete: (id: string) => adminApiCall<any>(`/api/mobile/admin/services/${id}`, { method: "DELETE" }),
+  getAll: () => adminApiCall<any[]>("/api/admin/services"),
+  getById: (id: string) => adminApiCall<any>(`/api/admin/services/${id}`),
+  create: (data: any) => adminApiCall<any>("/api/admin/services", { method: "POST", body: data }),
+  update: (id: string, data: any) => adminApiCall<any>(`/api/admin/services/${id}`, { method: "PATCH", body: data }),
+  delete: (id: string) => adminApiCall<any>(`/api/admin/services/${id}`, { method: "DELETE" }),
 };
 
 export const adminProfile = {
-  get: () => adminApiCall<any>("/api/mobile/admin/settings"),
-  update: (data: any) => adminApiCall<any>("/api/mobile/admin/settings", { method: "PATCH", body: data }),
+  get: () => adminApiCall<any>("/api/admin/settings"),
+  update: (data: any) => adminApiCall<any>("/api/admin/settings", { method: "PATCH", body: data }),
 };
 
 export const adminLogs = {
