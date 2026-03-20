@@ -239,9 +239,14 @@ export default function InvoiceCreateScreen() {
     formData.append("clientId", selectedClientId);
     formData.append("status", "pending");
     formData.append("items", JSON.stringify(mappedItems));
+    formData.append("lineItems", JSON.stringify(mappedItems));
     formData.append("total_excluding_tax", totalHT.toFixed(2));
+    formData.append("priceExcludingTax", totalHT.toFixed(2));
     formData.append("total", totalTTC.toFixed(2));
+    formData.append("total_including_tax", totalTTC.toFixed(2));
+    formData.append("amount", totalTTC.toFixed(2));
     formData.append("tax_rate", dominantTva);
+    formData.append("taxRate", dominantTva);
     formData.append("issueDate", issueDate);
     formData.append("dueDate", dueDateStr);
     if (notes.trim()) formData.append("notes", notes.trim());

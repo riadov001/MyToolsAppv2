@@ -1485,21 +1485,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             body: JSON.stringify(invoicePayload),
           });
           const txt = await r.text();
-          if (!txt.includes("<!DOCTYPE") && !txt.includes("<html")) {
-            const parsed = JSON.parse(txt);
-            if (r.status < 500 && parsed) {
-              console.log(`[CONVERT-INVOICE] ✅ Manual invoice created via ${seg}, status ${r.status}`);
-              return res.status(r.ok ? r.status : 201).json({
-                ...parsed,
-                quoteId: id,
-                clientId,
-                totalHT: totalHT.toFixed(2),
-                totalTTC: totalTTC.toFixed(2),
-                items: mappedItems,
-              });
-            }
+          if (txt.includes("<!DOCTYPE") || txt.includes("<html")) {
+            console.log(`[CONVERT-INVOICE] ${seg} => HTML (auth failed)`);
+            continue;
           }
-        } catch {}
+          const parsed = JSON.parse(txt);
+          if (r.ok && parsed?.id) {
+            console.log(`[CONVERT-INVOICE] ✅ Invoice created via ${seg}, status ${r.status}`);
+            return res.status(201).json({
+              ...parsed,
+              quoteId: id,
+              clientId,
+              total_excluding_tax: totalHT.toFixed(2),
+              total_including_tax: totalTTC.toFixed(2),
+              priceExcludingTax: totalHT.toFixed(2),
+              amount: totalTTC.toFixed(2),
+              items: mappedItems,
+            });
+          }
+          console.log(`[CONVERT-INVOICE] ${seg} => ${r.status}: ${txt.substring(0, 200)}`);
+        } catch (e: any) {
+          console.log(`[CONVERT-INVOICE] ${seg} => error: ${e.message}`);
+        }
       }
 
       console.log(`[CONVERT-INVOICE] All invoice creation endpoints failed for quote ${id}`);
