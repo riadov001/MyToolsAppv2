@@ -223,11 +223,13 @@ export default function QuoteCreateScreen() {
       return {
         description: it.description.trim(),
         quantity: qty,
-        unitPrice: price.toString(),
-        priceExcludingTax: price.toString(),
-        taxRate: tax.toString(),
+        unit_price: price.toString(),
+        unit_price_excluding_tax: price.toString(),
+        tax_rate: tax.toString(),
       };
     });
+
+    const dominantTva = validItems.length > 0 ? String(parseFloat(validItems[0].tvaRate) || 20) : "20";
 
     const vehicleInfo = (vehicleBrand || vehicleModel || vehiclePlate) ? {
       brand: vehicleBrand.trim() || undefined,
@@ -235,33 +237,35 @@ export default function QuoteCreateScreen() {
       plate: vehiclePlate.trim() || undefined,
     } : undefined;
 
-    const payload: any = {
-      clientId: selectedClientId,
-      status: "pending",
-      items: mappedItems,
-      totalHT: totalHT.toFixed(2),
-      totalTTC: totalTTC.toFixed(2),
-      tvaRate: validItems.length > 0 ? String(parseFloat(validItems[0].tvaRate) || 20) : "20",
-    };
-
-    if (notes.trim()) payload.notes = notes.trim();
-    if (selectedServices[0]) payload.serviceId = selectedServices[0];
-    payload.issueDate = new Date().toISOString().split("T")[0];
+    const issueDate = new Date().toISOString().split("T")[0];
     const validUntil = new Date();
     validUntil.setDate(validUntil.getDate() + 30);
-    payload.validUntil = validUntil.toISOString().split("T")[0];
+    const validUntilStr = validUntil.toISOString().split("T")[0];
 
-    if (vehicleInfo) {
-      payload.vehicleInfo = vehicleInfo;
-    }
+    const formData = new FormData();
+    formData.append("clientId", selectedClientId);
+    formData.append("status", "pending");
+    formData.append("items", JSON.stringify(mappedItems));
+    formData.append("total_excluding_tax", totalHT.toFixed(2));
+    formData.append("total", totalTTC.toFixed(2));
+    formData.append("tax_rate", dominantTva);
+    formData.append("issueDate", issueDate);
+    formData.append("validUntil", validUntilStr);
+    if (notes.trim()) formData.append("notes", notes.trim());
+    if (selectedServices[0]) formData.append("serviceId", selectedServices[0]);
+    if (vehicleInfo) formData.append("vehicleInfo", JSON.stringify(vehicleInfo));
+    if (selectedServices.length > 0) formData.append("selectedServices", JSON.stringify(selectedServices));
 
-    if (selectedServices.length > 0) {
-      payload.selectedServices = selectedServices;
-      payload.services = servicesArr.filter((s: any) => selectedServices.includes(s.id));
-    }
+    photos.forEach((photo, idx) => {
+      formData.append("files", {
+        uri: photo.uri,
+        name: photo.name || `quote_photo_${idx}.jpg`,
+        type: "image/jpeg",
+      } as any);
+    });
 
-    console.log("[QUOTE-CREATE] Payload photos:", photos.length, "items:", mappedItems.length, "totalTTC:", totalTTC);
-    createMutation.mutate(payload);
+    console.log("[QUOTE-CREATE] photos:", photos.length, "items:", mappedItems.length, "totalTTC:", totalTTC);
+    createMutation.mutate(formData as any);
   };
 
   return (

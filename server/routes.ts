@@ -1223,7 +1223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return clean;
           });
         }
-        console.log(`[SANITIZE] ${path} Mapped totals - HT: ${req.body.total_excluding_tax}, TTC: ${req.body.total}`);
+        console.log(`[SANITIZE] ${path} Full body:`, JSON.stringify(req.body).substring(0, 800));
       }
 
       const { body, contentType } = buildBody();
@@ -1239,39 +1239,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { status: r.status, text: txt, headers: r.headers };
       };
 
-      const isMutation = !["GET", "HEAD"].includes(req.method);
       const adminUrl = `${EXTERNAL_API}/admin${req.url}`;
       const mobileUrl = `${EXTERNAL_API}/mobile/admin${req.url}`;
 
-      let result: Awaited<ReturnType<typeof tryUrl>> = null;
+      // Toujours essayer /mobile/admin/ en premier, puis /admin/ en fallback
+      let result = await tryUrl(mobileUrl);
 
-      if (isMutation) {
-        // Pour les créations/modifications, essayer d'abord /admin/ (routes standard)
+      if (!result) {
         result = await tryUrl(adminUrl);
-        if (result && result.status < 500) {
-          console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status}`);
-        } else {
-          // Fallback vers /mobile/admin/ si /admin/ échoue
-          const mobileResult = await tryUrl(mobileUrl);
-          if (mobileResult && (result === null || mobileResult.status < (result?.status ?? 999))) {
-            result = mobileResult;
-            console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${result.status} (mobile fallback)`);
-          } else if (result) {
-            console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status} (kept admin result)`);
-          }
-        }
+        if (result) console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status} (legacy fallback)`);
       } else {
-        // Pour les lectures, essayer d'abord /mobile/admin/ puis /admin/
-        result = await tryUrl(mobileUrl);
-        if (!result) {
-          result = await tryUrl(adminUrl);
-          if (result) console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${result.status} (legacy fallback)`);
-        } else {
-          console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${result.status}`);
+        console.log(`[MOBILE-ADMIN] ${req.method} /mobile/admin${req.url} => ${result.status}`);
+        // Si la route mobile retourne une erreur 4xx, tenter /admin/ comme fallback
+        if (result.status >= 400) {
+          const fallback = await tryUrl(adminUrl);
+          if (fallback && fallback.status < result.status) {
+            console.log(`[MOBILE-ADMIN] ${req.method} /admin${req.url} => ${fallback.status} (admin fallback, better than ${result.status})`);
+            result = fallback;
+          }
         }
       }
 
       if (!result) {
+        const isMutation = !["GET", "HEAD"].includes(req.method);
         return res.status(404).json({ success: false, message: isMutation ? "Cette fonctionnalité n'est pas disponible sur ce serveur." : "Endpoint non trouvé" });
       }
 
@@ -1283,6 +1273,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const data = JSON.parse(result.text);
+        // Log complet de la réponse pour debug des montants
+        if (req.method === "POST" && result.status < 300) {
+          console.log(`[MOBILE-ADMIN-RESP] ${req.method} ${req.url} => keys: ${Object.keys(data).join(",")}, total: ${data.total ?? data.totalTTC ?? data.amount ?? "?"}, totalHT: ${data.total_excluding_tax ?? data.totalHT ?? data.priceExcludingTax ?? "?"}`);
+        } else if (result.status >= 400) {
+          console.log(`[MOBILE-ADMIN-ERR] ${req.method} ${req.url} => ${result.status}: ${result.text.substring(0, 400)}`);
+        }
         return res.status(result.status).json(data);
       } catch {
         return res.status(result.status).send(result.text);

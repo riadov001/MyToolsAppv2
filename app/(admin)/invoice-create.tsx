@@ -220,9 +220,9 @@ export default function InvoiceCreateScreen() {
       return {
         description: it.description.trim(),
         quantity: qty,
-        unitPrice: price.toString(),
-        priceExcludingTax: price.toString(),
-        taxRate: tax.toString(),
+        unit_price: price.toString(),
+        unit_price_excluding_tax: price.toString(),
+        tax_rate: tax.toString(),
       };
     });
 
@@ -230,24 +230,33 @@ export default function InvoiceCreateScreen() {
       ? (parseFloat(validItems[0].tvaRate) || 20).toString()
       : "20";
 
-    const payload: any = {
-      clientId: selectedClientId,
-      status: "pending",
-      items: mappedItems,
-      totalHT: totalHT.toFixed(2),
-      totalTTC: totalTTC.toFixed(2),
-      tvaRate: dominantTva,
-    };
-
-    if (notes.trim()) payload.notes = notes.trim();
-    payload.issueDate = new Date().toISOString().split("T")[0];
+    const issueDate = new Date().toISOString().split("T")[0];
     const dueDate = new Date();
     dueDate.setMonth(dueDate.getMonth() + 1);
-    payload.dueDate = dueDate.toISOString().split("T")[0];
-    if (paymentMethod) payload.paymentMethod = paymentMethod;
+    const dueDateStr = dueDate.toISOString().split("T")[0];
 
-    console.log("[INVOICE-CREATE] Payload items:", mappedItems.length, "photos:", photos.length, "totalTTC:", totalTTC);
-    createMutation.mutate(payload);
+    const formData = new FormData();
+    formData.append("clientId", selectedClientId);
+    formData.append("status", "pending");
+    formData.append("items", JSON.stringify(mappedItems));
+    formData.append("total_excluding_tax", totalHT.toFixed(2));
+    formData.append("total", totalTTC.toFixed(2));
+    formData.append("tax_rate", dominantTva);
+    formData.append("issueDate", issueDate);
+    formData.append("dueDate", dueDateStr);
+    if (notes.trim()) formData.append("notes", notes.trim());
+    if (paymentMethod) formData.append("paymentMethod", paymentMethod);
+
+    photos.forEach((photo, idx) => {
+      formData.append("files", {
+        uri: photo.uri,
+        name: photo.name || `invoice_photo_${idx}.jpg`,
+        type: "image/jpeg",
+      } as any);
+    });
+
+    console.log("[INVOICE-CREATE] items:", mappedItems.length, "photos:", photos.length, "totalTTC:", totalTTC);
+    createMutation.mutate(formData as any);
   };
 
   return (
